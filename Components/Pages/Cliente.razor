@@ -1,0 +1,246 @@
+@page "/cliente"
+@rendermode InteractiveServer
+@inject FrontBlazorTutorial.Services.ApiService Api
+@inject IJSRuntime JS
+
+<PageTitle>Clientes</PageTitle>
+
+<div class="container mt-4">
+    <h3>Clientes</h3>
+
+    @* ───────── ALERTA ───────── *@
+    @if (!string.IsNullOrEmpty(mensaje))
+    {
+        <div class="alert @(exito ? "alert-success" : "alert-danger") alert-dismissible fade show">
+            @mensaje
+            <button type="button" class="btn-close" @onclick="() => mensaje = string.Empty"></button>
+        </div>
+    }
+
+    @* ───────── BOTON NUEVO ───────── *@
+    @if (!mostrarFormulario)
+    {
+        <button class="btn btn-primary mb-3" @onclick="NuevoRegistro">Nuevo Cliente</button>
+    }
+
+    @* ───────── LIMITE DE REGISTROS ───────── *@
+    <div class="d-flex align-items-center mb-3">
+        <label class="form-label me-2 mb-0">Limite:</label>
+        <input class="form-control me-2" type="number" style="width:100px" @bind="limite" />
+        <button class="btn btn-outline-secondary" @onclick="CargarRegistros">Cargar</button>
+    </div>
+
+    @* ───────── FORMULARIO ───────── *@
+    @if (mostrarFormulario)
+    {
+        <div class="card mb-3">
+            <div class="card-header">
+                @(editando ? "Editar Cliente" : "Nuevo Cliente")
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    @if (editando)
+                    {
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">ID</label>
+                            <input class="form-control" value="@campoId" disabled />
+                        </div>
+                    }
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Credito</label>
+                        <input class="form-control" type="number" step="0.01" @bind="campoCredito" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Persona</label>
+                        <select class="form-select" @bind="campoFkcodpersona">
+                            <option value="">-- Seleccione --</option>
+                            @foreach (var p in personas)
+                            {
+                                <option value="@p["codigo"]">@p["nombre"] (@p["codigo"])</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Empresa</label>
+                        <select class="form-select" @bind="campoFkcodempresa">
+                            <option value="">-- Ninguna --</option>
+                            @foreach (var e in empresas)
+                            {
+                                <option value="@e["codigo"]">@e["nombre"] (@e["codigo"])</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-success me-2" @onclick="GuardarRegistro">Guardar</button>
+                <button class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+            </div>
+        </div>
+    }
+
+    @* ───────── SPINNER ───────── *@
+    @if (cargando)
+    {
+        <div class="d-flex justify-content-center my-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+        </div>
+    }
+
+    @* ───────── TABLA ───────── *@
+    @if (!cargando && registros.Any())
+    {
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Persona</th>
+                    <th>Credito</th>
+                    <th>Empresa</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var reg in registros)
+                {
+                    <tr>
+                        <td>@reg["id"]</td>
+                        <td>@ObtenerNombrePersona(reg["fkcodpersona"]?.ToString())</td>
+                        <td>@reg["credito"]</td>
+                        <td>@ObtenerNombreEmpresa(reg["fkcodempresa"]?.ToString())</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm me-1"
+                                    @onclick="() => EditarRegistro(reg)">Editar</button>
+                            <button class="btn btn-danger btn-sm"
+                                    @onclick="() => EliminarRegistro(reg)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @if (!cargando && !registros.Any())
+    {
+        <div class="alert alert-warning">No se encontraron registros en la tabla cliente.</div>
+    }
+</div>
+
+@code {
+    private List<Dictionary<string, object?>> registros = new();
+    private List<Dictionary<string, object?>> personas = new();
+    private List<Dictionary<string, object?>> empresas = new();
+    private bool cargando = true;
+    private bool mostrarFormulario = false;
+    private bool editando = false;
+    private string mensaje = string.Empty;
+    private bool exito = false;
+
+    private string campoId = string.Empty;
+    private double campoCredito = 0;
+    private string campoFkcodpersona = string.Empty;
+    private string campoFkcodempresa = string.Empty;
+    private int? limite = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        personas = await Api.ListarAsync("persona");
+        empresas = await Api.ListarAsync("empresa");
+        await CargarRegistros();
+    }
+
+    private async Task CargarRegistros()
+    {
+        cargando = true;
+        registros = await Api.ListarAsync("cliente", limite);
+        cargando = false;
+    }
+
+    private string ObtenerNombrePersona(string? codigo)
+    {
+        if (string.IsNullOrEmpty(codigo)) return "Sin persona";
+        var persona = personas.FirstOrDefault(p => p["codigo"]?.ToString() == codigo);
+        return persona?["nombre"]?.ToString() ?? codigo;
+    }
+
+    private string ObtenerNombreEmpresa(string? codigo)
+    {
+        if (string.IsNullOrEmpty(codigo)) return "-";
+        var empresa = empresas.FirstOrDefault(e => e["codigo"]?.ToString() == codigo);
+        return empresa?["nombre"]?.ToString() ?? codigo;
+    }
+
+    private void NuevoRegistro()
+    {
+        editando = false;
+        campoId = string.Empty;
+        campoCredito = 0;
+        campoFkcodpersona = string.Empty;
+        campoFkcodempresa = string.Empty;
+        mostrarFormulario = true;
+        mensaje = string.Empty;
+    }
+
+    private void EditarRegistro(Dictionary<string, object?> reg)
+    {
+        editando = true;
+        campoId = reg["id"]?.ToString() ?? "";
+        campoCredito = double.TryParse(reg["credito"]?.ToString(), out double c) ? c : 0;
+        campoFkcodpersona = reg["fkcodpersona"]?.ToString() ?? "";
+        campoFkcodempresa = reg["fkcodempresa"]?.ToString() ?? "";
+        mostrarFormulario = true;
+        mensaje = string.Empty;
+    }
+
+    private async Task GuardarRegistro()
+    {
+        var datos = new Dictionary<string, object?>
+        {
+            ["credito"] = campoCredito,
+            ["fkcodpersona"] = campoFkcodpersona,
+            ["fkcodempresa"] = string.IsNullOrEmpty(campoFkcodempresa) ? null : campoFkcodempresa
+        };
+
+        if (editando)
+        {
+            var confirmar = await JS.InvokeAsync<bool>("confirm",
+                $"¿Está seguro de actualizar el Cliente #{campoId}?");
+            if (!confirmar) return;
+            var resultado = await Api.ActualizarAsync("cliente", "id", campoId, datos);
+            exito = resultado.exito;
+            mensaje = resultado.mensaje;
+        }
+        else
+        {
+            var resultado = await Api.CrearAsync("cliente", datos);
+            exito = resultado.exito;
+            mensaje = resultado.mensaje;
+        }
+
+        if (exito)
+        {
+            mostrarFormulario = false;
+            await CargarRegistros();
+        }
+    }
+
+    private async Task EliminarRegistro(Dictionary<string, object?> reg)
+    {
+        string id = reg["id"]?.ToString() ?? "";
+        var confirmar = await JS.InvokeAsync<bool>("confirm",
+            $"¿Está seguro de eliminar el Cliente #{id}?");
+        if (!confirmar) return;
+        var resultado = await Api.EliminarAsync("cliente", "id", id);
+        exito = resultado.exito;
+        mensaje = resultado.mensaje;
+
+        if (exito)
+            await CargarRegistros();
+    }
+
+    private void Cancelar()
+    {
+        mostrarFormulario = false;
+        mensaje = string.Empty;
+    }
+}

@@ -1,7 +1,88 @@
-﻿@page "/"
+@page "/"
+@inject FrontBlazorTutorial.Services.ApiService Api
 
-<PageTitle>Home</PageTitle>
+<PageTitle>CRUD Facturas</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="container mt-4">
+    <h1>CRUD - Base de Datos Facturas</h1>
+    <p class="lead">
+        Frontend Blazor que consume la API generica
+        <strong>ApiGenericaCsharp</strong> para gestionar tablas
+        de una base de datos.
+    </p>
 
-Welcome to your new app.
+    <div class="alert alert-info">
+        <strong>Tablas disponibles:</strong> Producto, Persona, Usuario, Empresa, Rol, Ruta.
+        <br />
+        Use el menu lateral para navegar a cada tabla.
+    </div>
+
+    @if (diagnostico != null)
+    {
+        <div class="card mt-4 border-secondary">
+            <div class="card-header bg-secondary bg-opacity-10 text-muted py-2">
+                <small><strong>Conexion activa</strong></small>
+            </div>
+            <div class="card-body py-2">
+                <table class="table table-sm table-borderless mb-0" style="font-size: 0.85rem;">
+                    <tbody>
+                        @if (diagnostico.ContainsKey("proveedor"))
+                        {
+                            <tr>
+                                <td class="text-muted" style="width:160px">Proveedor</td>
+                                <td><strong>@diagnostico["proveedor"]</strong></td>
+                            </tr>
+                        }
+                        @if (diagnostico.ContainsKey("baseDatos"))
+                        {
+                            <tr>
+                                <td class="text-muted">Base de datos</td>
+                                <td><strong>@diagnostico["baseDatos"]</strong></td>
+                            </tr>
+                        }
+                        @if (diagnostico.ContainsKey("version"))
+                        {
+                            <tr>
+                                <td class="text-muted">Version</td>
+                                <td><small>@(diagnostico["version"].Length > 80 ? diagnostico["version"][..80] + "..." : diagnostico["version"])</small></td>
+                            </tr>
+                        }
+                        @if (diagnostico.ContainsKey("direccionIP"))
+                        {
+                            <tr>
+                                <td class="text-muted">Servidor</td>
+                                <td>
+                                    @diagnostico["direccionIP"]@if (diagnostico.ContainsKey("puerto")){<text>:@diagnostico["puerto"]</text>}
+                                </td>
+                            </tr>
+                        }
+                        @if (diagnostico.ContainsKey("usuarioConectado"))
+                        {
+                            <tr>
+                                <td class="text-muted">Usuario</td>
+                                <td>@diagnostico["usuarioConectado"]</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    else if (cargado)
+    {
+        <div class="mt-4">
+            <small class="text-muted">No se pudo obtener informacion de conexion de la API.</small>
+        </div>
+    }
+</div>
+
+@code {
+    private Dictionary<string, string>? diagnostico;
+    private bool cargado;
+
+    protected override async Task OnInitializedAsync()
+    {
+        diagnostico = await Api.ObtenerDiagnosticoAsync();
+        cargado = true;
+    }
+}

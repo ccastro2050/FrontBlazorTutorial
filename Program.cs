@@ -16,6 +16,7 @@ builder.Services.AddScoped(sp => new HttpClient
 
 // Registrar los servicios de la API
 builder.Services.AddScoped<FrontBlazorTutorial.Services.ApiService>();
+builder.Services.AddScoped<FrontBlazorTutorial.Services.SpService>();
 
 var app = builder.Build();
 

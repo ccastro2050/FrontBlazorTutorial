@@ -1,0 +1,195 @@
+@page "/ruta"
+@rendermode InteractiveServer
+@inject FrontBlazorTutorial.Services.ApiService Api
+@inject IJSRuntime JS
+
+<PageTitle>Rutas</PageTitle>
+
+<div class="container mt-4">
+    <h3>Rutas</h3>
+
+    @* ───────── ALERTA ───────── *@
+    @if (!string.IsNullOrEmpty(mensaje))
+    {
+        <div class="alert @(exito ? "alert-success" : "alert-danger") alert-dismissible fade show">
+            @mensaje
+            <button type="button" class="btn-close" @onclick="() => mensaje = string.Empty"></button>
+        </div>
+    }
+
+    @* ───────── BOTON NUEVO ───────── *@
+    @if (!mostrarFormulario)
+    {
+        <button class="btn btn-primary mb-3" @onclick="NuevoRegistro">Nueva Ruta</button>
+    }
+
+    @* ───────── LIMITE DE REGISTROS ───────── *@
+    <div class="d-flex align-items-center mb-3">
+        <label class="form-label me-2 mb-0">Limite:</label>
+        <input class="form-control me-2" type="number" style="width:100px" @bind="limite" />
+        <button class="btn btn-outline-secondary" @onclick="CargarRegistros">Cargar</button>
+    </div>
+
+    @* ───────── FORMULARIO ───────── *@
+    @if (mostrarFormulario)
+    {
+        <div class="card mb-3">
+            <div class="card-header">
+                @(editando ? "Editar Ruta" : "Nueva Ruta")
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Ruta</label>
+                        <input class="form-control" @bind="campoRuta" disabled="@editando" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Descripcion</label>
+                        <input class="form-control" @bind="campoDescripcion" />
+                    </div>
+                </div>
+                <button class="btn btn-success me-2" @onclick="GuardarRegistro">Guardar</button>
+                <button class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+            </div>
+        </div>
+    }
+
+    @* ───────── SPINNER ───────── *@
+    @if (cargando)
+    {
+        <div class="d-flex justify-content-center my-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+        </div>
+    }
+
+    @* ───────── TABLA ───────── *@
+    @if (!cargando && registros.Any())
+    {
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Ruta</th>
+                    <th>Descripcion</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var reg in registros)
+                {
+                    <tr>
+                        <td>@reg["ruta"]</td>
+                        <td>@reg["descripcion"]</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm me-1"
+                                    @onclick="() => EditarRegistro(reg)">Editar</button>
+                            <button class="btn btn-danger btn-sm"
+                                    @onclick="() => EliminarRegistro(reg)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @if (!cargando && !registros.Any())
+    {
+        <div class="alert alert-warning">No se encontraron registros en la tabla ruta.</div>
+    }
+</div>
+
+@code {
+    private List<Dictionary<string, object?>> registros = new();
+    private bool cargando = true;
+    private bool mostrarFormulario = false;
+    private bool editando = false;
+    private string mensaje = string.Empty;
+    private bool exito = false;
+
+    private string campoRuta = string.Empty;
+    private string campoDescripcion = string.Empty;
+    private int? limite = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarRegistros();
+    }
+
+    private async Task CargarRegistros()
+    {
+        cargando = true;
+        registros = await Api.ListarAsync("ruta", limite);
+        cargando = false;
+    }
+
+    private void NuevoRegistro()
+    {
+        editando = false;
+        campoRuta = string.Empty;
+        campoDescripcion = string.Empty;
+        mostrarFormulario = true;
+        mensaje = string.Empty;
+    }
+
+    private void EditarRegistro(Dictionary<string, object?> reg)
+    {
+        editando = true;
+        campoRuta = reg["ruta"]?.ToString() ?? "";
+        campoDescripcion = reg["descripcion"]?.ToString() ?? "";
+        mostrarFormulario = true;
+        mensaje = string.Empty;
+    }
+
+    private async Task GuardarRegistro()
+    {
+        var datos = new Dictionary<string, object?>
+        {
+            ["ruta"] = campoRuta,
+            ["descripcion"] = campoDescripcion
+        };
+
+        if (editando)
+        {
+            datos.Remove("ruta");
+            var confirmar = await JS.InvokeAsync<bool>("confirm",
+                $"¿Está seguro de actualizar la Ruta '{campoRuta}'?");
+            if (!confirmar) return;
+            var resultado = await Api.ActualizarAsync("ruta", "ruta", campoRuta, datos);
+            exito = resultado.exito;
+            mensaje = resultado.mensaje;
+        }
+        else
+        {
+            var resultado = await Api.CrearAsync("ruta", datos);
+            exito = resultado.exito;
+            mensaje = resultado.mensaje;
+        }
+
+        if (exito)
+        {
+            mostrarFormulario = false;
+            await CargarRegistros();
+        }
+    }
+
+    private async Task EliminarRegistro(Dictionary<string, object?> reg)
+    {
+        string ruta = reg["ruta"]?.ToString() ?? "";
+        var confirmar = await JS.InvokeAsync<bool>("confirm",
+            $"¿Está seguro de eliminar la Ruta '{ruta}'?");
+        if (!confirmar) return;
+        var resultado = await Api.EliminarAsync("ruta", "ruta", ruta);
+        exito = resultado.exito;
+        mensaje = resultado.mensaje;
+
+        if (exito)
+            await CargarRegistros();
+    }
+
+    private void Cancelar()
+    {
+        mostrarFormulario = false;
+        mensaje = string.Empty;
+    }
+}

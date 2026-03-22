@@ -2,6 +2,22 @@
 
 Los tres estudiantes trabajan **en paralelo**, cada uno en su propia rama.
 
+### ¿Qué pasa si un estudiante trabaja más rápido que otro?
+
+No pasa nada. Cada `push` va a su propia branch, no a `main`. Las branches son independientes entre sí.
+
+Por ejemplo, si Estudiante 3 hace push de `crud-rol` y Estudiante 2 hace push de `crud-cliente` al mismo tiempo, cada uno está en su propia branch. No se chocan.
+
+Los PRs se pueden hacer en cualquier orden y momento. Lo único que importa es:
+
+- **Archivos diferentes = sin conflicto.** Como cada estudiante crea un archivo nuevo distinto (Empresa.razor, Cliente.razor, Rol.razor), no hay conflicto de merge.
+- **Si dos estudiantes modifican el mismo archivo**, ahí sí puede haber un conflicto. Pero en este paso eso no pasa.
+- **Si un CRUD depende de otro** (como Cliente depende de Empresa y Persona), conviene hacer merge del que no depende primero.
+
+Resumen: pueden acumularse varias branches con push sin PR y está bien. Cada branch es un mundo aparte hasta que se hace merge a `main`.
+
+---
+
 | Estudiante | Tabla | Rama | Campos | Nota |
 |------------|-------|------|--------|------|
 | **Estudiante 1** | empresa | `crud-empresa` | codigo, nombre | Tabla simple, 2 campos |
@@ -843,6 +859,43 @@ git pull
 ```
 
 Ahora el proyecto tiene 6 páginas CRUD funcionando: Producto, Persona, Usuario, Empresa, Rol y Cliente.
+
+---
+
+## ¿Cómo resolver conflictos de merge?
+
+Cuando dos branches modifican el **mismo archivo en las mismas líneas**, GitHub no puede hacer merge automáticamente y muestra un botón **Resolve conflicts** en el PR.
+
+Al hacer clic, se abre un editor con marcas como estas:
+
+```
+<<<<<<< crud-cliente
+    enlace a Cliente
+=======
+    enlace a Rol
+>>>>>>> main
+```
+
+Esto significa: "tu branch dice una cosa, pero main dice otra". Para resolverlo:
+
+1. Borrar las tres líneas de marcas (`<<<<<<<`, `=======`, `>>>>>>>`)
+2. Dejar el código correcto — puede ser uno, el otro, o ambos combinados
+3. Clic en **Mark as resolved**
+4. Clic en **Commit merge**
+
+Ejemplo resuelto (dejando ambos):
+```
+    enlace a Cliente
+    enlace a Rol
+```
+
+**¿Cuándo pasa esto en este proyecto?** Casi nunca, porque cada estudiante crea archivos nuevos diferentes. Pero podría pasar si dos estudiantes modifican el mismo archivo existente (por ejemplo, `NavMenu.razor` para agregar un link al menú).
+
+**Tip:** para evitar conflictos, hagan merge de los PRs uno a la vez. Después de cada merge, los demás estudiantes pueden actualizar su branch con:
+```bash
+git fetch origin
+git merge origin/main
+```
 
 ---
 

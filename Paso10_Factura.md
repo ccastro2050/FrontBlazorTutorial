@@ -26,6 +26,25 @@ git pull
 git checkout -b nombre-de-la-rama
 ```
 
+### ¿Cómo traer cambios de main a una branch que ya existe?
+
+Cuando un estudiante ya está trabajando en su branch (ej: `crud-factura`) y necesita traer cambios nuevos de `main` (porque otro PR fue mergeado), se usan dos comandos:
+
+```bash
+git fetch origin          # descarga los cambios de GitHub sin aplicarlos
+git merge origin/main     # aplica los cambios de main a la branch actual
+```
+
+**¿Por qué dos comandos y no `git pull`?**
+
+`git pull` hace `fetch` + `merge` juntos, pero solo trae cambios **de la misma branch**. Si el estudiante está en `crud-factura` y hace `git pull`, git buscaría cambios de `crud-factura` en GitHub — no de `main`.
+
+Para traer cambios **de otra branch** (main) a la branch actual, hay que hacerlo en dos pasos:
+- `git fetch origin` → "¿qué hay nuevo en GitHub?" (actualiza el índice local)
+- `git merge origin/main` → "traeme lo de main a mi branch" (aplica los cambios)
+
+**¿Cuándo se necesita esto?** Cuando hay dependencias entre tareas. Por ejemplo, Estudiante 2 necesita que SpService (hecho por Estudiante 1) esté en main antes de poder usar `@inject SpService` en Factura.razor.
+
 ---
 
 ## Estudiante 1 — Crear SpService

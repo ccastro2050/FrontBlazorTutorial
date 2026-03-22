@@ -2,22 +2,28 @@ using FrontBlazorTutorial.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Agregar servicios de Blazor Server
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Configurar HttpClient para conectarse a la API
+// La URL base se lee de appsettings.json
+var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "http://localhost:5035";
+builder.Services.AddScoped(sp => new HttpClient
+{
+    BaseAddress = new Uri(apiBaseUrl)
+});
+
+// Registrar los servicios de la API
+builder.Services.AddScoped<FrontBlazorTutorial.Services.ApiService>();
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configurar el pipeline HTTP.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
 }
-
-app.UseHttpsRedirection();
-
 
 app.UseAntiforgery();
 

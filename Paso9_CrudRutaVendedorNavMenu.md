@@ -10,6 +10,16 @@ Los tres estudiantes trabajan **en paralelo**, cada uno en su propia rama.
 
 ---
 
+## ¿En qué orden se hacen los PRs?
+
+Los PRs se pueden hacer **en cualquier orden** cuando cada uno toca archivos diferentes y no hay dependencias entre ellos. En este paso, Ruta.razor, Vendedor.razor y NavMenu.razor son archivos independientes — no se chocan.
+
+En el Paso 8, en cambio, **sí importaba el orden**: Cliente necesitaba que Empresa y Persona ya estuvieran en main, porque su código carga datos de esas tablas con `Api.ListarAsync("empresa")`.
+
+**Regla simple para saber si hay dependencia:** si la página hace `Api.ListarAsync("otra_tabla")` para llenar un select, esa otra tabla debe tener su CRUD mergeado primero. Si la página solo usa su propia tabla, no depende de nadie y el orden no importa.
+
+---
+
 ## Antes de empezar
 
 Cada estudiante actualiza main y crea su rama:

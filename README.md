@@ -16,7 +16,8 @@ El frontend **no accede directamente a la base de datos**. Toda la comunicación
 ┌──────────────┐     SignalR +     ┌────────────────────┐       SQL        ┌──────────────┐
 │   Frontend   │     HTTP          │   API REST (C#)    │  ←────────────→  │  Base de     │
 │   Blazor     │  ←────────────→   │  ApiGenericaCsharp  │  Queries/SPs    │  Datos       │
-│   Puerto 5235│                   │  Puerto 5035       │                  │  SQL Server  │
+│   Puerto 5235│                   │  Puerto 5035       │                  │  (la que use │
+│              │                   │                    │                  │   la API)    │
 └──────────────┘                   └────────────────────┘                  └──────────────┘
 ```
 
@@ -204,7 +205,7 @@ Cada tabla tiene **1 solo archivo** `.razor` que contiene tanto el HTML como la 
 
 - **.NET 9 SDK** instalado
 - **API REST** (`ApiGenericaCsharp`) corriendo en `http://localhost:5035`
-- **Base de datos** SQL Server con las tablas de facturación creadas
+- **Base de datos** SQL Server, PostgreSQL, MySQL u otra con las tablas de facturación creadas
 - **Git** instalado
 
 ---

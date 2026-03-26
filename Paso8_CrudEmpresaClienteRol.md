@@ -263,11 +263,11 @@ Empresa es más simple que Producto: misma estructura, menos campos.
 ```bash
 dotnet build
 git add .
-git commit -m "Agregar pagina CRUD Empresa"
+git commit -m "Agregar página CRUD Empresa"
 git push -u origin crud-empresa
 ```
 
-En GitHub: crear Pull Request `crud-empresa` → `main`, aprobar y hacer merge.
+Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `crud-empresa` → `main`. Si no aparece el botón: ir a la pestaña **Pull requests** → **New pull request**. Después, **Estudiante 1** va a la pestaña **Pull requests**, abre el PR, revisa en **Files changed**, y hace **Merge pull request** → **Confirm merge**.
 Después del merge, clic en **Delete branch** para limpiar.
 
 ---
@@ -492,11 +492,11 @@ Notar que `campoId.ToString()` es necesario porque la API recibe la clave como s
 ```bash
 dotnet build
 git add .
-git commit -m "Agregar pagina CRUD Rol"
+git commit -m "Agregar página CRUD Rol"
 git push -u origin crud-rol
 ```
 
-En GitHub: crear Pull Request `crud-rol` → `main`, aprobar y hacer merge.
+Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `crud-rol` → `main`. Si no aparece el botón: ir a la pestaña **Pull requests** → **New pull request**. Después, **Estudiante 1** va a la pestaña **Pull requests**, abre el PR, revisa en **Files changed**, y hace **Merge pull request** → **Confirm merge**.
 Después del merge, clic en **Delete branch** para limpiar.
 
 ---
@@ -840,11 +840,11 @@ Si Estudiante 2 sube el PR antes de que Empresa esté en main, la página funcio
 ```bash
 dotnet build
 git add .
-git commit -m "Agregar pagina CRUD Cliente"
+git commit -m "Agregar página CRUD Cliente"
 git push -u origin crud-cliente
 ```
 
-En GitHub: crear Pull Request `crud-cliente` → `main`, aprobar y hacer merge.
+Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `crud-cliente` → `main`. Si no aparece el botón: ir a la pestaña **Pull requests** → **New pull request**. Después, **Estudiante 1** va a la pestaña **Pull requests**, abre el PR, revisa en **Files changed**, y hace **Merge pull request** → **Confirm merge**.
 Después del merge, clic en **Delete branch** para limpiar.
 
 ---

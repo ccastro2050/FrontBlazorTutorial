@@ -277,11 +277,11 @@ dotnet build
 
 ```bash
 git add .
-git commit -m "Agregar pagina CRUD Persona"
+git commit -m "Agregar página CRUD Persona"
 git push -u origin crud-persona
 ```
 
-En GitHub: crear Pull Request `crud-persona` → `main`.
+Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `crud-persona` → `main`. Si no aparece: pestaña **Pull requests** → **New pull request**.
 
 **Estudiante 1** revisa y aprueba el PR, luego hace merge.
 
@@ -531,11 +531,11 @@ dotnet build
 
 ```bash
 git add .
-git commit -m "Agregar pagina CRUD Usuario"
+git commit -m "Agregar página CRUD Usuario"
 git push -u origin crud-usuario
 ```
 
-En GitHub: crear Pull Request `crud-usuario` → `main`.
+Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `crud-usuario` → `main`. Si no aparece: pestaña **Pull requests** → **New pull request**.
 
 **Estudiante 1** revisa y aprueba el PR, luego hace merge.
 

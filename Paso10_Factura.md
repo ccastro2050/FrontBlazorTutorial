@@ -99,7 +99,7 @@ namespace FrontBlazorTutorial.Services
             }
             catch (HttpRequestException ex)
             {
-                return (false, new(), $"Error de conexion: {ex.Message}");
+                return (false, new(), $"Error de conexión: {ex.Message}");
             }
         }
 
@@ -169,7 +169,7 @@ git commit -m "Agregar SpService para stored procedures"
 git push -u origin sp-service
 ```
 
-En GitHub: crear Pull Request `sp-service` → `main`, aprobar y hacer merge.
+Quien hizo push crea el PR en GitHub (botón amarillo "Compare & pull request"): `sp-service` → `main`. **Estudiante 1** revisa en **Files changed**, hace **Merge pull request** → **Confirm merge** → **Delete branch**.
 Después del merge, clic en **Delete branch**.
 
 ---
@@ -201,7 +201,7 @@ git commit -m "Actualizar Home con lista completa de tablas"
 git push -u origin actualizar-home
 ```
 
-En GitHub: crear Pull Request `actualizar-home` → `main`, aprobar y hacer merge.
+Quien hizo push crea el PR en GitHub (botón amarillo "Compare & pull request"): `actualizar-home` → `main`. **Estudiante 1** revisa en **Files changed**, hace **Merge pull request** → **Confirm merge** → **Delete branch**.
 Después del merge, clic en **Delete branch**.
 
 ---
@@ -830,11 +830,11 @@ Esto requiere Stored Procedures porque en una sola operación se debe:
 ```bash
 dotnet build
 git add .
-git commit -m "Agregar pagina Factura con stored procedures"
+git commit -m "Agregar página Factura con stored procedures"
 git push -u origin crud-factura
 ```
 
-En GitHub: crear Pull Request `crud-factura` → `main`, aprobar y hacer merge.
+Quien hizo push crea el PR en GitHub (botón amarillo "Compare & pull request"): `crud-factura` → `main`. **Estudiante 1** revisa en **Files changed**, hace **Merge pull request** → **Confirm merge** → **Delete branch**.
 Después del merge, clic en **Delete branch**.
 
 ---

@@ -122,7 +122,7 @@ Reemplazar todo el contenido con:
     <div class="alert alert-info">
         <strong>Tablas disponibles:</strong> Producto, Persona, Usuario, Empresa, Rol, Ruta.
         <br />
-        Use el menu lateral para navegar a cada tabla.
+        Use el menú lateral para navegar a cada tabla.
     </div>
 
     @@if (diagnostico != null)
@@ -183,7 +183,7 @@ Reemplazar todo el contenido con:
     {
         <div class="mt-4">
             <small class="text-muted">No se pudo obtener informacion
-                de conexion de la API.</small>
+                de conexión de la API.</small>
         </div>
     }
 </div>
@@ -242,7 +242,7 @@ Debe mostrar **"0 Errores"**.
 
 ```bash
 git add .
-git commit -m "Configurar layout, navegacion y pagina Home"
+git commit -m "Configurar layout, navegacion y página Home"
 git push -u origin layout-navegacion-home
 ```
 

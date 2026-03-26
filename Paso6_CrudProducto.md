@@ -2,7 +2,7 @@
 
 **Quién lo hace:** Estudiante 1
 
-**Rama:** `crud-producto-pagina`
+**Rama:** `crud-producto-página`
 
 Este es el primer CRUD completo. Sirve como modelo para los demás. La página permite **Listar, Crear, Editar y Eliminar** productos.
 
@@ -252,11 +252,11 @@ dotnet build
 
 ```bash
 git add .
-git commit -m "Agregar pagina CRUD Producto"
-git push -u origin crud-producto-pagina
+git commit -m "Agregar página CRUD Producto"
+git push -u origin crud-producto-página
 ```
 
-En GitHub: crear PR `crud-producto-pagina` → `main`, aprobar y hacer merge.
+Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `crud-producto-página` → `main`. Si no aparece el botón: ir a la pestaña **Pull requests** → **New pull request**. Después, **Estudiante 1** va a la pestaña **Pull requests**, abre el PR, revisa en **Files changed**, y hace **Merge pull request** → **Confirm merge**.
 
 Después del merge, **Estudiante 2 y 3** actualizan:
 ```bash

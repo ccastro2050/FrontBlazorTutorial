@@ -34,7 +34,7 @@ git checkout -b nombre-de-la-rama
 
 ## Estudiante 1 — CRUD Ruta
 
-Ruta tiene una particularidad: la clave primaria se llama `ruta`, que es el mismo nombre que la tabla. Los campos son `ruta` (string) y `descripcion` (string).
+Ruta tiene una particularidad: la clave primaria se llama `ruta`, que es el mismo nombre que la tabla. Los campos son `ruta` (string) y `descripción` (string).
 
 ### 1. Crear el archivo `Components/Pages/Ruta.razor`
 
@@ -121,7 +121,7 @@ Ruta tiene una particularidad: la clave primaria se llama `ruta`, que es el mism
                 {
                     <tr>
                         <td>@reg["ruta"]</td>
-                        <td>@reg["descripcion"]</td>
+                        <td>@reg["descripción"]</td>
                         <td>
                             <button class="btn btn-warning btn-sm me-1"
                                     @onclick="() => EditarRegistro(reg)">Editar</button>
@@ -177,7 +177,7 @@ Ruta tiene una particularidad: la clave primaria se llama `ruta`, que es el mism
     {
         editando = true;
         campoRuta = reg["ruta"]?.ToString() ?? "";
-        campoDescripcion = reg["descripcion"]?.ToString() ?? "";
+        campoDescripcion = reg["descripción"]?.ToString() ?? "";
         mostrarFormulario = true;
         mensaje = string.Empty;
     }
@@ -187,7 +187,7 @@ Ruta tiene una particularidad: la clave primaria se llama `ruta`, que es el mism
         var datos = new Dictionary<string, object?>
         {
             ["ruta"] = campoRuta,
-            ["descripcion"] = campoDescripcion
+            ["descripción"] = campoDescripcion
         };
 
         if (editando)
@@ -252,11 +252,11 @@ El primer `"ruta"` es el nombre de la tabla. El segundo `"ruta"` es el nombre de
 ```bash
 dotnet build
 git add .
-git commit -m "Agregar pagina CRUD Ruta"
+git commit -m "Agregar página CRUD Ruta"
 git push -u origin crud-ruta
 ```
 
-En GitHub: crear Pull Request `crud-ruta` → `main`, aprobar y hacer merge.
+Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `crud-ruta` → `main`. Si no aparece el botón: ir a la pestaña **Pull requests** → **New pull request**. Después, **Estudiante 1** va a la pestaña **Pull requests**, abre el PR, revisa en **Files changed**, y hace **Merge pull request** → **Confirm merge**.
 Después del merge, clic en **Delete branch**.
 
 ---
@@ -510,11 +510,11 @@ Vendedor usa el mismo patrón que Cliente (Paso 8): id autoincremental, FK a per
 ```bash
 dotnet build
 git add .
-git commit -m "Agregar pagina CRUD Vendedor"
+git commit -m "Agregar página CRUD Vendedor"
 git push -u origin crud-vendedor
 ```
 
-En GitHub: crear Pull Request `crud-vendedor` → `main`, aprobar y hacer merge.
+Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `crud-vendedor` → `main`. Si no aparece el botón: ir a la pestaña **Pull requests** → **New pull request**. Después, **Estudiante 1** va a la pestaña **Pull requests**, abre el PR, revisa en **Files changed**, y hace **Merge pull request** → **Confirm merge**.
 Después del merge, clic en **Delete branch**.
 
 ---
@@ -644,7 +644,7 @@ git commit -m "Agregar links de Cliente, Vendedor y Factura al menu"
 git push -u origin actualizar-navmenu
 ```
 
-En GitHub: crear Pull Request `actualizar-navmenu` → `main`, aprobar y hacer merge.
+Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `actualizar-navmenu` → `main`. Si no aparece el botón: ir a la pestaña **Pull requests** → **New pull request**. Después, **Estudiante 1** va a la pestaña **Pull requests**, abre el PR, revisa en **Files changed**, y hace **Merge pull request** → **Confirm merge**.
 Después del merge, clic en **Delete branch**.
 
 ---

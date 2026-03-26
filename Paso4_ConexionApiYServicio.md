@@ -175,7 +175,7 @@ namespace FrontBlazorTutorial.Services
             }
             catch (HttpRequestException ex)
             {
-                return (false, $"Error de conexion: {ex.Message}");
+                return (false, $"Error de conexión: {ex.Message}");
             }
         }
 
@@ -205,7 +205,7 @@ namespace FrontBlazorTutorial.Services
             }
             catch (HttpRequestException ex)
             {
-                return (false, $"Error de conexion: {ex.Message}");
+                return (false, $"Error de conexión: {ex.Message}");
             }
         }
 
@@ -230,19 +230,19 @@ namespace FrontBlazorTutorial.Services
             }
             catch (HttpRequestException ex)
             {
-                return (false, $"Error de conexion: {ex.Message}");
+                return (false, $"Error de conexión: {ex.Message}");
             }
         }
 
         // ──────────────────────────────────────────────
-        // DIAGNOSTICO: GET /api/diagnostico/conexion
+        // DIAGNOSTICO: GET /api/diagnostico/conexión
         // ──────────────────────────────────────────────
         public async Task<Dictionary<string, string>?> ObtenerDiagnosticoAsync()
         {
             try
             {
                 var respuesta = await _http.GetFromJsonAsync<JsonElement>(
-                    "/api/diagnostico/conexion", _jsonOptions);
+                    "/api/diagnostico/conexión", _jsonOptions);
 
                 if (respuesta.TryGetProperty("servidor", out JsonElement servidor))
                 {
@@ -304,7 +304,7 @@ namespace FrontBlazorTutorial.Services
 | `CrearAsync("producto", datos)` | POST | `/api/producto` | Inserta un registro nuevo |
 | `ActualizarAsync("producto", "codigo", "P001", datos)` | PUT | `/api/producto/codigo/P001` | Modifica un registro existente |
 | `EliminarAsync("producto", "codigo", "P001")` | DELETE | `/api/producto/codigo/P001` | Elimina un registro |
-| `ObtenerDiagnosticoAsync()` | GET | `/api/diagnostico/conexion` | Información de la conexión a BD |
+| `ObtenerDiagnosticoAsync()` | GET | `/api/diagnostico/conexión` | Información de la conexión a BD |
 
 **¿Qué es `ConvertirDatos`?**
 
@@ -366,7 +366,7 @@ FrontBlazorTutorial/
 
 ```bash
 git add .
-git commit -m "Agregar ApiService y configurar conexion a la API"
+git commit -m "Agregar ApiService y configurar conexión a la API"
 git push
 ```
 

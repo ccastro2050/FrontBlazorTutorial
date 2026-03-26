@@ -60,7 +60,7 @@ git push -u origin main                                          # subir a GitHu
 
 ```powershell
 git checkout main                          # volver a la rama principal
-git pull                                   # descargar ultimos cambios
+git pull                                   # descargar últimos cambios
 git checkout -b api-service                # crear rama para el ApiService
 
 # --- Crear carpeta Services ---
@@ -80,7 +80,7 @@ mkdir Services                             # crear carpeta para los servicios
 # --- Verificar y subir ---
 dotnet build                               # verificar que compila sin errores
 git add .                                  # agregar cambios al staging
-git commit -m "feat: agregar ApiService y configurar conexion a la API"  # commit
+git commit -m "feat: agregar ApiService y configurar conexión a la API"  # commit
 git push -u origin api-service             # subir rama a GitHub
 
 # --- En GitHub: crear PR api-service -> main, aprobar y merge ---
@@ -95,33 +95,33 @@ git push -u origin api-service             # subir rama a GitHub
 **Archivos creados/modificados:**
 - `Components/Layout/MainLayout.razor` (MODIFICADO — cambiar titulo)
 - `Components/Layout/NavMenu.razor` (MODIFICADO — reemplazar menu completo)
-- `Components/Pages/Home.razor` (MODIFICADO — agregar diagnostico de conexion)
+- `Components/Pages/Home.razor` (MODIFICADO — agregar diagnostico de conexión)
 - `Components/Pages/Counter.razor` (ELIMINADO)
 - `Components/Pages/Weather.razor` (ELIMINADO)
 
 ```powershell
 git checkout main                          # volver a la rama principal
-git pull                                   # descargar ultimos cambios
+git pull                                   # descargar últimos cambios
 git checkout -b layout-navegacion-home     # crear rama para layout y home
 
 # --- Modificar MainLayout.razor ---
 # Cambiar el link "About" por: <span>Frontend Blazor - API GenericaCsharp</span>
 
 # --- Modificar NavMenu.razor ---
-# Reemplazar todo el contenido con el menu lateral que incluye:
+# Reemplazar todo el contenido con el menú lateral que incluye:
 # Home, Producto, Persona, Usuario, Empresa, Rol, Ruta
 
 # --- Modificar Home.razor ---
-# Agregar seccion de diagnostico que muestra info de conexion a la BD
+# Agregar seccion de diagnostico que muestra info de conexión a la BD
 # Usa @inject ApiService Api y llama a ObtenerDiagnosticoAsync()
 
-# --- Eliminar paginas de ejemplo ---
+# --- Eliminar páginas de ejemplo ---
 # Eliminar Counter.razor y Weather.razor
 
 # --- Verificar y subir ---
 dotnet build                               # verificar que compila
 git add .                                  # agregar cambios
-git commit -m "feat: configurar layout, navegacion y pagina Home"  # commit
+git commit -m "feat: configurar layout, navegacion y página Home"  # commit
 git push -u origin layout-navegacion-home  # subir rama
 
 # --- En GitHub: crear PR layout-navegacion-home -> main, aprobar y merge ---
@@ -131,15 +131,15 @@ git push -u origin layout-navegacion-home  # subir rama
 
 ### Paso 6 — CRUD Producto
 
-**Rama:** `crud-producto-pagina`
+**Rama:** `crud-producto-página`
 
 **Archivos creados:**
 - `Components/Pages/Producto.razor` (NUEVO)
 
 ```powershell
 git checkout main                          # volver a la rama principal
-git pull                                   # descargar ultimos cambios
-git checkout -b crud-producto-pagina       # crear rama para CRUD Producto
+git pull                                   # descargar últimos cambios
+git checkout -b crud-producto-página       # crear rama para CRUD Producto
 
 # --- Crear Components/Pages/Producto.razor ---
 # Pagina con @page "/producto"
@@ -152,10 +152,10 @@ git checkout -b crud-producto-pagina       # crear rama para CRUD Producto
 # --- Verificar y subir ---
 dotnet build                               # verificar que compila
 git add .                                  # agregar cambios
-git commit -m "feat: agregar pagina CRUD Producto"  # commit
-git push -u origin crud-producto-pagina    # subir rama
+git commit -m "feat: agregar página CRUD Producto"  # commit
+git push -u origin crud-producto-página    # subir rama
 
-# --- En GitHub: crear PR crud-producto-pagina -> main, aprobar y merge ---
+# --- En GitHub: crear PR crud-producto-página -> main, aprobar y merge ---
 ```
 
 ---
@@ -169,18 +169,18 @@ git push -u origin crud-producto-pagina    # subir rama
 
 ```powershell
 git checkout main                          # volver a la rama principal
-git pull                                   # descargar ultimos cambios
+git pull                                   # descargar últimos cambios
 git checkout -b crud-empresa               # crear rama para CRUD Empresa
 
 # --- Crear Components/Pages/Empresa.razor ---
 # Pagina con @page "/empresa"
 # Tabla simple con 2 campos: codigo (string), nombre (string)
-# Misma estructura que Producto pero mas sencilla
+# Misma estructura que Producto pero más sencilla
 
 # --- Verificar y subir ---
 dotnet build                               # verificar que compila
 git add .                                  # agregar cambios
-git commit -m "feat: agregar pagina CRUD Empresa"  # commit
+git commit -m "feat: agregar página CRUD Empresa"  # commit
 git push -u origin crud-empresa            # subir rama
 
 # --- En GitHub: crear PR crud-empresa -> main, aprobar y merge ---
@@ -198,18 +198,18 @@ git push -u origin crud-empresa            # subir rama
 
 ```powershell
 git checkout main                          # volver a la rama principal
-git pull                                   # descargar ultimos cambios
+git pull                                   # descargar últimos cambios
 git checkout -b crud-ruta                  # crear rama para CRUD Ruta
 
 # --- Crear Components/Pages/Ruta.razor ---
 # Pagina con @page "/ruta"
-# Campos: ruta (string, clave primaria), descripcion (string)
+# Campos: ruta (string, clave primaria), descripción (string)
 # Particularidad: la clave primaria se llama "ruta", igual que la tabla
 
 # --- Verificar y subir ---
 dotnet build                               # verificar que compila
 git add .                                  # agregar cambios
-git commit -m "feat: agregar pagina CRUD Ruta"  # commit
+git commit -m "feat: agregar página CRUD Ruta"  # commit
 git push -u origin crud-ruta               # subir rama
 
 # --- En GitHub: crear PR crud-ruta -> main, aprobar y merge ---
@@ -227,7 +227,7 @@ git push -u origin crud-ruta               # subir rama
 
 ```powershell
 git checkout main                          # volver a la rama principal
-git pull                                   # descargar ultimos cambios
+git pull                                   # descargar últimos cambios
 git checkout -b sp-service                 # crear rama para SpService
 
 # --- Crear Services/SpService.cs ---
@@ -253,7 +253,7 @@ git push -u origin sp-service              # subir rama
 
 ## Estudiante 2
 
-Estudiante 2 se enfoca en las tablas que tienen llaves foraneas y la factura (la pagina mas compleja).
+Estudiante 2 se enfoca en las tablas que tienen llaves foraneas y la factura (la página más compleja).
 
 ---
 
@@ -281,7 +281,7 @@ dotnet run                                                       # verificar que
 
 ```powershell
 git checkout main                          # volver a la rama principal
-git pull                                   # descargar ultimos cambios (incluye Producto mergeado)
+git pull                                   # descargar últimos cambios (incluye Producto mergeado)
 git checkout -b crud-persona               # crear rama para CRUD Persona
 
 # --- Crear Components/Pages/Persona.razor ---
@@ -293,7 +293,7 @@ git checkout -b crud-persona               # crear rama para CRUD Persona
 # --- Verificar y subir ---
 dotnet build                               # verificar que compila
 git add .                                  # agregar cambios
-git commit -m "feat: agregar pagina CRUD Persona"  # commit
+git commit -m "feat: agregar página CRUD Persona"  # commit
 git push -u origin crud-persona            # subir rama
 
 # --- En GitHub: crear PR crud-persona -> main ---
@@ -313,7 +313,7 @@ git push -u origin crud-persona            # subir rama
 
 ```powershell
 git checkout main                          # volver a la rama principal
-git pull                                   # descargar ultimos cambios (incluye Empresa y Persona)
+git pull                                   # descargar últimos cambios (incluye Empresa y Persona)
 git checkout -b crud-cliente               # crear rama para CRUD Cliente
 
 # --- Crear Components/Pages/Cliente.razor ---
@@ -323,16 +323,16 @@ git checkout -b crud-cliente               # crear rama para CRUD Cliente
 #   - Carga datos de persona y empresa con Api.ListarAsync("persona") y Api.ListarAsync("empresa")
 #   - Muestra selects (<select>) en lugar de inputs para las FK
 #   - El id no se envia al crear (lo genera la BD)
-#   - La tabla muestra nombres en lugar de codigos de FK
+#   - La tabla muestra nombres en lugar de códigos de FK
 
-# --- Si Empresa aun no esta mergeada, esperar o traer cambios despues ---
+# --- Si Empresa aun no esta mergeada, esperar o traer cambios después ---
 git fetch origin                           # descargar cambios de GitHub sin aplicarlos
 git merge origin/main                      # traer lo nuevo de main a esta rama
 
 # --- Verificar y subir ---
 dotnet build                               # verificar que compila
 git add .                                  # agregar cambios
-git commit -m "feat: agregar pagina CRUD Cliente con llaves foraneas"  # commit
+git commit -m "feat: agregar página CRUD Cliente con llaves foraneas"  # commit
 git push -u origin crud-cliente            # subir rama
 
 # --- En GitHub: crear PR crud-cliente -> main ---
@@ -352,7 +352,7 @@ git push -u origin crud-cliente            # subir rama
 
 ```powershell
 git checkout main                          # volver a la rama principal
-git pull                                   # descargar ultimos cambios
+git pull                                   # descargar últimos cambios
 git checkout -b crud-vendedor              # crear rama para CRUD Vendedor
 
 # --- Crear Components/Pages/Vendedor.razor ---
@@ -360,12 +360,12 @@ git checkout -b crud-vendedor              # crear rama para CRUD Vendedor
 # Campos: id (int, auto), carnet (int), direccion (string), fkcodpersona (select)
 # Similar a Cliente: carga personas para el select
 # El id no se envia al crear (lo genera la BD)
-# La tabla muestra el nombre de la persona en lugar del codigo
+# La tabla muestra el nombre de la persona en lugar del código
 
 # --- Verificar y subir ---
 dotnet build                               # verificar que compila
 git add .                                  # agregar cambios
-git commit -m "feat: agregar pagina CRUD Vendedor"  # commit
+git commit -m "feat: agregar página CRUD Vendedor"  # commit
 git push -u origin crud-vendedor           # subir rama
 
 # --- En GitHub: crear PR crud-vendedor -> main ---
@@ -385,11 +385,11 @@ git push -u origin crud-vendedor           # subir rama
 
 ```powershell
 git checkout main                          # volver a la rama principal
-git pull                                   # descargar ultimos cambios (incluye SpService)
+git pull                                   # descargar últimos cambios (incluye SpService)
 git checkout -b crud-factura               # crear rama para Factura
 
 # --- Si SpService aun no esta mergeado, esperar ---
-# --- Si ya se creo la rama pero SpService se mergeo despues ---
+# --- Si ya se creo la rama pero SpService se mergeo después ---
 git fetch origin                           # descargar cambios de GitHub sin aplicarlos
 git merge origin/main                      # traer SpService a esta rama
 
@@ -416,7 +416,7 @@ git merge origin/main                      # traer SpService a esta rama
 # --- Verificar y subir ---
 dotnet build                               # verificar que compila
 git add .                                  # agregar cambios
-git commit -m "feat: agregar pagina Factura con stored procedures"  # commit
+git commit -m "feat: agregar página Factura con stored procedures"  # commit
 git push -u origin crud-factura            # subir rama
 
 # --- En GitHub: crear PR crud-factura -> main ---
@@ -427,7 +427,7 @@ git push -u origin crud-factura            # subir rama
 
 ## Estudiante 3
 
-Estudiante 3 trabaja en las tablas mas simples y en tareas de soporte (NavMenu, Home).
+Estudiante 3 trabaja en las tablas más simples y en tareas de soporte (NavMenu, Home).
 
 ---
 
@@ -455,7 +455,7 @@ dotnet run                                                       # verificar que
 
 ```powershell
 git checkout main                          # volver a la rama principal
-git pull                                   # descargar ultimos cambios (incluye Producto mergeado)
+git pull                                   # descargar últimos cambios (incluye Producto mergeado)
 git checkout -b crud-usuario               # crear rama para CRUD Usuario
 
 # --- Crear Components/Pages/Usuario.razor ---
@@ -467,7 +467,7 @@ git checkout -b crud-usuario               # crear rama para CRUD Usuario
 # --- Verificar y subir ---
 dotnet build                               # verificar que compila
 git add .                                  # agregar cambios
-git commit -m "feat: agregar pagina CRUD Usuario"  # commit
+git commit -m "feat: agregar página CRUD Usuario"  # commit
 git push -u origin crud-usuario            # subir rama
 
 # --- En GitHub: crear PR crud-usuario -> main ---
@@ -485,7 +485,7 @@ git push -u origin crud-usuario            # subir rama
 
 ```powershell
 git checkout main                          # volver a la rama principal
-git pull                                   # descargar ultimos cambios
+git pull                                   # descargar últimos cambios
 git checkout -b crud-rol                   # crear rama para CRUD Rol
 
 # --- Crear Components/Pages/Rol.razor ---
@@ -498,7 +498,7 @@ git checkout -b crud-rol                   # crear rama para CRUD Rol
 # --- Verificar y subir ---
 dotnet build                               # verificar que compila
 git add .                                  # agregar cambios
-git commit -m "feat: agregar pagina CRUD Rol"  # commit
+git commit -m "feat: agregar página CRUD Rol"  # commit
 git push -u origin crud-rol                # subir rama
 
 # --- En GitHub: crear PR crud-rol -> main ---
@@ -516,11 +516,11 @@ git push -u origin crud-rol                # subir rama
 
 ```powershell
 git checkout main                          # volver a la rama principal
-git pull                                   # descargar ultimos cambios
-git checkout -b actualizar-navmenu         # crear rama para actualizar el menu
+git pull                                   # descargar últimos cambios
+git checkout -b actualizar-navmenu         # crear rama para actualizar el menú
 
 # --- Modificar Components/Layout/NavMenu.razor ---
-# Agregar links a las paginas nuevas: Cliente, Vendedor, Factura
+# Agregar links a las páginas nuevas: Cliente, Vendedor, Factura
 # Cada link usa <NavLink> con el href correspondiente
 
 # --- Verificar y subir ---
@@ -544,13 +544,13 @@ git push -u origin actualizar-navmenu      # subir rama
 
 ```powershell
 git checkout main                          # volver a la rama principal
-git pull                                   # descargar ultimos cambios
+git pull                                   # descargar últimos cambios
 git checkout -b actualizar-home            # crear rama para actualizar Home
 
 # --- Modificar Components/Pages/Home.razor ---
 # Actualizar la lista de tablas disponibles:
 # Antes: Producto, Persona, Usuario, Empresa, Rol, Ruta
-# Despues: Producto, Persona, Usuario, Empresa, Rol, Ruta, Cliente, Vendedor, Factura
+# Después: Producto, Persona, Usuario, Empresa, Rol, Ruta, Cliente, Vendedor, Factura
 
 # --- Verificar y subir ---
 dotnet build                               # verificar que compila
@@ -570,9 +570,9 @@ Esta tabla muestra el orden en que se crearon y mergearon los PRs a lo largo de 
 
 | # | Sprint | Paso | Rama | Descripcion | Responsable | Depende de |
 |---|--------|------|------|-------------|-------------|------------|
-| 1 | Sprint 2 | 4 | `api-service` | ApiService + conexion a la API | Est1 | - |
+| 1 | Sprint 2 | 4 | `api-service` | ApiService + conexión a la API | Est1 | - |
 | 2 | Sprint 2 | 5 | `layout-navegacion-home` | Layout, NavMenu y Home | Est1 | PR #1 |
-| 3 | Sprint 3 | 6 | `crud-producto-pagina` | CRUD Producto | Est1 | PR #2 |
+| 3 | Sprint 3 | 6 | `crud-producto-página` | CRUD Producto | Est1 | PR #2 |
 | 4 | Sprint 4 | 7 | `crud-persona` | CRUD Persona | Est2 | PR #3 |
 | 5 | Sprint 4 | 7 | `crud-usuario` | CRUD Usuario | Est3 | PR #3 |
 | 6 | Sprint 5 | 8 | `crud-empresa` | CRUD Empresa | Est1 | PR #3 |
@@ -598,9 +598,9 @@ FrontBlazorTutorial/
 │   │   ├── MainLayout.razor              ← Est1 (Paso 5) - estructura visual principal
 │   │   ├── MainLayout.razor.css          ← estilos del layout (viene con el template)
 │   │   ├── NavMenu.razor                 ← Est1 (Paso 5) + Est3 (Paso 9) - menu lateral
-│   │   └── NavMenu.razor.css             ← estilos del menu (viene con el template)
+│   │   └── NavMenu.razor.css             ← estilos del menú (viene con el template)
 │   ├── Pages/
-│   │   ├── Home.razor                    ← Est1 (Paso 5) + Est3 (Paso 10) - pagina de inicio
+│   │   ├── Home.razor                    ← Est1 (Paso 5) + Est3 (Paso 10) - página de inicio
 │   │   ├── Error.razor                   ← viene con el template
 │   │   ├── Producto.razor                ← Est1 (Paso 6) - CRUD Producto
 │   │   ├── Persona.razor                 ← Est2 (Paso 7) - CRUD Persona
@@ -665,13 +665,13 @@ FrontBlazorTutorial/
 ```powershell
 # --- Comandos que se usan SIEMPRE antes de empezar una tarea nueva ---
 git checkout main                          # volver a la rama principal
-git pull                                   # descargar ultimos cambios
+git pull                                   # descargar últimos cambios
 git checkout -b nombre-rama                # crear rama nueva para la tarea
 
 # --- Comandos que se usan AL TERMINAR una tarea ---
 dotnet build                               # verificar que compila
 git add .                                  # agregar todos los cambios
-git commit -m "feat: descripcion del cambio"  # crear commit con mensaje descriptivo
+git commit -m "feat: descripción del cambio"  # crear commit con mensaje descriptivo
 git push -u origin nombre-rama             # subir rama a GitHub
 # Luego: crear PR en GitHub, pedir revision, merge
 
@@ -681,7 +681,7 @@ git merge origin/main                      # aplicar cambios de main a la rama a
 
 # --- Comandos de consulta ---
 git status                                 # ver estado actual (archivos modificados, rama)
-git log --oneline -10                      # ver ultimos 10 commits
+git log --oneline -10                      # ver últimos 10 commits
 git branch                                 # ver ramas locales
 git branch -a                              # ver todas las ramas (locales y remotas)
 git diff                                   # ver cambios no agregados al staging

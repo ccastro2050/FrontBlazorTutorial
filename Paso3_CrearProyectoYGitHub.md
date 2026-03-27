@@ -44,9 +44,9 @@ Tres cuentas de GitHub, cada una con un rol:
 │                        REPOSITORIO                                │
 │                  FrontBlazorTutorial                               │
 │                                                                   │
-│  main ●────●────●────●────●────●────●──  (solo merges de PRs)    │
+│  main ●────●────●────●────●────●────●──  (solo merges desde terminal) │
 │            │    ▲    │    ▲    │    ▲                             │
-│            │    │    │    │    │    │  Pull Requests               │
+│            │    │    │    │    │    │                              │
 │            │    │    │    │    │    │                              │
 │            ├── crud-producto ●──●  (Estudiante 1)                │
 │            │         ├── crud-empresa ●──●  (Estudiante 1)       │
@@ -60,13 +60,13 @@ Tres cuentas de GitHub, cada una con un rol:
 └───────────────────────────────────────────────────────────────────┘
 ```
 
-Nadie trabaja directamente en `main`. Cada tarea se hace en su propia rama. Cuando se termina, se crea un Pull Request, se revisa, y se hace merge a main. Después se crea una rama nueva para la siguiente tarea.
+Nadie trabaja directamente en `main`. Cada tarea se hace en su propia rama. Cuando se termina, Estudiante 1 fusiona la rama desde la terminal con `git fetch` + `git merge`. Después se crea una rama nueva para la siguiente tarea.
 
 | Cuenta | Rol | Ramas | Permisos |
 |--------|-----|-------|----------|
-| **Estudiante 1** | Administrador del repositorio | Una rama por tarea (ej: `crud-producto`, `crud-empresa`) | Owner — crea el repo, invita, trabaja en sus ramas, revisa PRs de los demás, hace merge a main |
-| **Estudiante 2** | Colaborador | Una rama por tarea (ej: `crud-persona`, `crud-cliente`) | Write — trabaja en sus ramas, crea Pull Requests hacia main |
-| **Estudiante 3** | Colaborador | Una rama por tarea (ej: `crud-usuario`, `crud-rol`) | Write — trabaja en sus ramas, crea Pull Requests hacia main |
+| **Estudiante 1** | Administrador del repositorio | Una rama por tarea (ej: `crud-producto`, `crud-empresa`) | Owner — crea el repo, invita, trabaja en sus ramas, fusiona las ramas de los demás desde la terminal |
+| **Estudiante 2** | Colaborador | Una rama por tarea (ej: `crud-persona`, `crud-cliente`) | Write — trabaja en sus ramas, sube con git push |
+| **Estudiante 3** | Colaborador | Una rama por tarea (ej: `crud-usuario`, `crud-rol`) | Write — trabaja en sus ramas, sube con git push |
 
 ---
 
@@ -100,34 +100,6 @@ git branch -M main
 git push -u origin main
 ```
 
-### C3.1 Proteger la rama main
-
-Proteger `main` significa que **nadie puede hacer push directo** a main — ni siquiera el dueño del repositorio. Todo cambio debe entrar por Pull Request aprobado. Esto evita que alguien suba código sin revisión.
-
-**¿Qué pasa cuando se protege?**
-- `git push origin main` falla — GitHub lo rechaza
-- Solo se puede integrar código creando un PR y haciendo merge
-- Se puede exigir que al menos 1 persona apruebe antes del merge
-
-**¿Por qué se hace después del primer push?** Porque el primer push (`git push -u origin main`) necesita subir el proyecto inicial directamente. Después de eso, todo cambio va por PR.
-
-**¿Aplica también para el dueño?** Sí. Con Branch Ruleset aplica para todos, incluyendo el dueño. Esto es lo recomendado para aprender — así todos están obligados a usar PRs. Si se necesita desactivar temporalmente, se puede hacer desde Settings.
-
-**Pasos para proteger:**
-
-1. Ir al repositorio en GitHub
-2. Clic en **Settings** (pestaña superior)
-3. En el menú izquierdo: **Rules** → **Rulesets**
-4. Clic en **New ruleset** → **New branch ruleset**
-5. **Ruleset Name:** `proteger-main`
-6. **Enforcement status:** cambiar de `Disabled` a **Active**
-7. En **Target branches:** clic en **Add target** → **Include by pattern** → escribir `main` → **Add**
-8. En la sección **Rules**, marcar **Require a pull request before merging**
-9. Dentro de esa opción, marcar **Require approvals** → dejar en **1**
-10. Clic en **Create** (botón verde abajo)
-
-A partir de este momento, nadie puede hacer `git push origin main` directamente. Todo debe ir por Pull Request.
-
 ### C4. Invitar a Estudiante 2 y Estudiante 3
 
 1. Ir al repositorio en GitHub: `https://github.com/TU_USUARIO/FrontBlazorTutorial`
@@ -148,7 +120,7 @@ git checkout -b crud-producto
 git push -u origin crud-producto
 ```
 
-Al terminar esta tarea, se crea un Pull Request hacia main. Después del merge, se vuelve a main y se crea una rama nueva para la siguiente tarea:
+Al terminar esta tarea, Estudiante 1 fusiona desde la terminal. Después del merge, se vuelve a main y se crea una rama nueva para la siguiente tarea:
 
 ```bash
 git checkout main
@@ -229,44 +201,30 @@ git commit -m "Agregar página Producto con CRUD completo"
 git push
 ```
 
-### 2. Crear un Pull Request (PR) desde GitHub:
+### 2. Estudiante 1 fusiona desde la terminal:
 
-**¿Qué es un Pull Request?** Es una solicitud para integrar los cambios de una rama a main. En lugar de meter código directo a main, el PR permite:
-- Ver exactamente qué archivos cambiaron (línea por línea)
-- Que otro integrante del equipo revise el código antes de aprobarlo
-- Tener un historial de qué se integró, cuándo y quién lo aprobó
+```bash
+git checkout main
+git fetch origin
+git merge origin/nombre-de-la-rama
+git push origin main
+```
 
-Pasos:
+- `git fetch origin` trae todas las ramas del remoto.
+- `git merge origin/nombre-de-la-rama` fusiona esa rama en `main`.
+- `git push origin main` sube `main` actualizado a GitHub.
 
-1. Ir al repositorio en GitHub
-2. GitHub muestra un banner amarillo: **"crud-producto had recent pushes"** → Clic en **Compare & pull request**
-3. O ir a la pestaña **Pull requests** → **New pull request**
-4. Base: `main` ← Compare: `crud-producto` (o el nombre de la rama)
-5. Escribir título y descripción del cambio
-6. Clic en **Create pull request**
+> Si aparece una pantalla de vim pidiendo un mensaje de merge, escribir `:wq` y presionar Enter.
 
-### 3. Revisar y aprobar:
-
-- Los PRs de **Estudiante 2 y 3** los revisa y aprueba **Estudiante 1**.
-- Los PRs de **Estudiante 1** los puede revisar **Estudiante 2 o 3**.
-
-Pasos para quien revisa:
-1. Ir a la pestaña **Pull requests**
-2. Abrir el PR
-3. Revisar los cambios en la pestaña **Files changed**
-4. Si todo está bien: **Review changes** → **Approve** → **Submit review**
-5. Clic en **Merge pull request** → **Confirm merge**
-
-### 4. Después del merge, preparar la siguiente tarea:
+### 3. Después del merge, preparar la siguiente tarea:
 
 ```bash
 git checkout main
 git pull
 git checkout -b crud-siguiente-tarea
-git push -u origin crud-siguiente-tarea
 ```
 
-Se vuelve a main, se traen los cambios, y se crea una rama nueva para la siguiente tarea. La rama anterior ya no se usa.
+Se vuelve a main, se traen los cambios, y se crea una rama nueva para la siguiente tarea.
 
 ---
 
@@ -336,10 +294,10 @@ ESTUDIANTE 1                    GITHUB                     ESTUDIANTE 2 / 3
 7. git checkout -b crud-producto    7. git checkout -b crud-persona
    Trabaja, commit, push               Trabaja, commit, push
 
-8. Crea PR crud-producto → main    8. Crea PR crud-persona → main
+8. git push                            8. git push
 
-9. Est2/3 revisa PR de Est1        9. Est1 revisa PR de Est2/3
-   Aprueba → Merge                    Aprueba → Merge
+9. Est1: git fetch + git merge desde terminal
+   git push origin main
 
                     ← main actualizado →
 

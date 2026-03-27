@@ -11,13 +11,13 @@ Este documento es un resumen paso a paso de **todo** lo que hizo cada estudiante
 
 ## Estudiante 1 (Administrador / Scrum Master)
 
-Estudiante 1 es el administrador del repositorio. Crea el proyecto, invita a los colaboradores, revisa y aprueba los PRs de los demas, y hace merge a main.
+Estudiante 1 es el administrador del repositorio. Crea el proyecto, invita a los colaboradores, fusiona las ramas de los demas desde la terminal.
 
 ---
 
 ### Paso 0 — Plan de Desarrollo
 
-No requiere codigo. Se revisa el plan de desarrollo, se asignan las historias de usuario y se definen las convenciones de trabajo (ramas, commits, PRs).
+No requiere codigo. Se revisa el plan de desarrollo, se asignan las historias de usuario y se definen las convenciones de trabajo (ramas, commits, merge).
 
 ---
 
@@ -83,7 +83,7 @@ git add .                                  # agregar cambios al staging
 git commit -m "feat: agregar ApiService y configurar conexión a la API"  # commit
 git push -u origin api-service             # subir rama a GitHub
 
-# --- En GitHub: crear PR api-service -> main, aprobar y merge ---
+# --- Est1 fusiona: git fetch origin + git merge origin/api-service + git push origin main ---
 ```
 
 ---
@@ -124,7 +124,7 @@ git add .                                  # agregar cambios
 git commit -m "feat: configurar layout, navegacion y página Home"  # commit
 git push -u origin layout-navegacion-home  # subir rama
 
-# --- En GitHub: crear PR layout-navegacion-home -> main, aprobar y merge ---
+# --- Est1 fusiona: git fetch origin + git merge origin/layout-navegacion-home + git push origin main ---
 ```
 
 ---
@@ -155,7 +155,7 @@ git add .                                  # agregar cambios
 git commit -m "feat: agregar página CRUD Producto"  # commit
 git push -u origin crud-producto-página    # subir rama
 
-# --- En GitHub: crear PR crud-producto-página -> main, aprobar y merge ---
+# --- Est1 fusiona: git fetch origin + git merge origin/crud-producto-página + git push origin main ---
 ```
 
 ---
@@ -183,7 +183,7 @@ git add .                                  # agregar cambios
 git commit -m "feat: agregar página CRUD Empresa"  # commit
 git push -u origin crud-empresa            # subir rama
 
-# --- En GitHub: crear PR crud-empresa -> main, aprobar y merge ---
+# --- Est1 fusiona: git fetch origin + git merge origin/crud-empresa + git push origin main ---
 # IMPORTANTE: hacer merge de Empresa ANTES que Cliente (Est2 depende de esta tabla)
 ```
 
@@ -212,7 +212,7 @@ git add .                                  # agregar cambios
 git commit -m "feat: agregar página CRUD Ruta"  # commit
 git push -u origin crud-ruta               # subir rama
 
-# --- En GitHub: crear PR crud-ruta -> main, aprobar y merge ---
+# --- Est1 fusiona: git fetch origin + git merge origin/crud-ruta + git push origin main ---
 ```
 
 ---
@@ -245,8 +245,8 @@ git add .                                  # agregar cambios
 git commit -m "feat: agregar SpService para stored procedures"  # commit
 git push -u origin sp-service              # subir rama
 
-# --- En GitHub: crear PR sp-service -> main, aprobar y merge ---
-# IMPORTANTE: hacer merge ANTES de que Est2 suba su PR de Factura
+# --- Est1 fusiona: git fetch origin + git merge origin/sp-service + git push origin main ---
+# IMPORTANTE: hacer merge ANTES de que Est2 suba la rama de Factura
 ```
 
 ---
@@ -296,8 +296,8 @@ git add .                                  # agregar cambios
 git commit -m "feat: agregar página CRUD Persona"  # commit
 git push -u origin crud-persona            # subir rama
 
-# --- En GitHub: crear PR crud-persona -> main ---
-# Estudiante 1 revisa, aprueba y hace merge
+# --- Est1 fusiona: git fetch origin + git merge origin/crud-persona + git push origin main ---
+# Estudiante 1 fusiona desde la terminal
 ```
 
 ---
@@ -335,8 +335,8 @@ git add .                                  # agregar cambios
 git commit -m "feat: agregar página CRUD Cliente con llaves foraneas"  # commit
 git push -u origin crud-cliente            # subir rama
 
-# --- En GitHub: crear PR crud-cliente -> main ---
-# Estudiante 1 revisa, aprueba y hace merge
+# --- Est1 fusiona: git fetch origin + git merge origin/crud-cliente + git push origin main ---
+# Estudiante 1 fusiona desde la terminal
 ```
 
 ---
@@ -368,8 +368,8 @@ git add .                                  # agregar cambios
 git commit -m "feat: agregar página CRUD Vendedor"  # commit
 git push -u origin crud-vendedor           # subir rama
 
-# --- En GitHub: crear PR crud-vendedor -> main ---
-# Estudiante 1 revisa, aprueba y hace merge
+# --- Est1 fusiona: git fetch origin + git merge origin/crud-vendedor + git push origin main ---
+# Estudiante 1 fusiona desde la terminal
 ```
 
 ---
@@ -419,8 +419,8 @@ git add .                                  # agregar cambios
 git commit -m "feat: agregar página Factura con stored procedures"  # commit
 git push -u origin crud-factura            # subir rama
 
-# --- En GitHub: crear PR crud-factura -> main ---
-# Estudiante 1 revisa, aprueba y hace merge
+# --- Est1 fusiona: git fetch origin + git merge origin/crud-factura + git push origin main ---
+# Estudiante 1 fusiona desde la terminal
 ```
 
 ---
@@ -470,8 +470,8 @@ git add .                                  # agregar cambios
 git commit -m "feat: agregar página CRUD Usuario"  # commit
 git push -u origin crud-usuario            # subir rama
 
-# --- En GitHub: crear PR crud-usuario -> main ---
-# Estudiante 1 revisa, aprueba y hace merge
+# --- Est1 fusiona: git fetch origin + git merge origin/crud-usuario + git push origin main ---
+# Estudiante 1 fusiona desde la terminal
 ```
 
 ---
@@ -501,8 +501,8 @@ git add .                                  # agregar cambios
 git commit -m "feat: agregar página CRUD Rol"  # commit
 git push -u origin crud-rol                # subir rama
 
-# --- En GitHub: crear PR crud-rol -> main ---
-# Estudiante 1 revisa, aprueba y hace merge
+# --- Est1 fusiona: git fetch origin + git merge origin/crud-rol + git push origin main ---
+# Estudiante 1 fusiona desde la terminal
 ```
 
 ---
@@ -529,8 +529,8 @@ git add .                                  # agregar cambios
 git commit -m "feat: agregar links de Cliente, Vendedor y Factura al NavMenu"  # commit
 git push -u origin actualizar-navmenu      # subir rama
 
-# --- En GitHub: crear PR actualizar-navmenu -> main ---
-# Estudiante 1 revisa, aprueba y hace merge
+# --- Est1 fusiona: git fetch origin + git merge origin/actualizar-navmenu + git push origin main ---
+# Estudiante 1 fusiona desde la terminal
 ```
 
 ---
@@ -558,32 +558,32 @@ git add .                                  # agregar cambios
 git commit -m "feat: actualizar Home con lista completa de tablas"  # commit
 git push -u origin actualizar-home         # subir rama
 
-# --- En GitHub: crear PR actualizar-home -> main ---
-# Estudiante 1 revisa, aprueba y hace merge
+# --- Est1 fusiona: git fetch origin + git merge origin/actualizar-home + git push origin main ---
+# Estudiante 1 fusiona desde la terminal
 ```
 
 ---
 
-## Cronologia de Pull Requests
+## Cronologia de Merges
 
-Esta tabla muestra el orden en que se crearon y mergearon los PRs a lo largo de todo el proyecto:
+Esta tabla muestra el orden en que se fusionaron las ramas a main a lo largo de todo el proyecto:
 
 | # | Sprint | Paso | Rama | Descripcion | Responsable | Depende de |
 |---|--------|------|------|-------------|-------------|------------|
 | 1 | Sprint 2 | 4 | `api-service` | ApiService + conexión a la API | Est1 | - |
-| 2 | Sprint 2 | 5 | `layout-navegacion-home` | Layout, NavMenu y Home | Est1 | PR #1 |
-| 3 | Sprint 3 | 6 | `crud-producto-página` | CRUD Producto | Est1 | PR #2 |
-| 4 | Sprint 4 | 7 | `crud-persona` | CRUD Persona | Est2 | PR #3 |
-| 5 | Sprint 4 | 7 | `crud-usuario` | CRUD Usuario | Est3 | PR #3 |
-| 6 | Sprint 5 | 8 | `crud-empresa` | CRUD Empresa | Est1 | PR #3 |
-| 7 | Sprint 5 | 8 | `crud-rol` | CRUD Rol | Est3 | PR #3 |
-| 8 | Sprint 5 | 8 | `crud-cliente` | CRUD Cliente (con FKs) | Est2 | PR #4, #6 |
+| 2 | Sprint 2 | 5 | `layout-navegacion-home` | Layout, NavMenu y Home | Est1 | Merge #1 |
+| 3 | Sprint 3 | 6 | `crud-producto-página` | CRUD Producto | Est1 | Merge #2 |
+| 4 | Sprint 4 | 7 | `crud-persona` | CRUD Persona | Est2 | Merge #3 |
+| 5 | Sprint 4 | 7 | `crud-usuario` | CRUD Usuario | Est3 | Merge #3 |
+| 6 | Sprint 5 | 8 | `crud-empresa` | CRUD Empresa | Est1 | Merge #3 |
+| 7 | Sprint 5 | 8 | `crud-rol` | CRUD Rol | Est3 | Merge #3 |
+| 8 | Sprint 5 | 8 | `crud-cliente` | CRUD Cliente (con FKs) | Est2 | Merge #4, #6 |
 | 9 | Sprint 6 | 9 | `crud-ruta` | CRUD Ruta | Est1 | - |
-| 10 | Sprint 6 | 9 | `crud-vendedor` | CRUD Vendedor (con FK) | Est2 | PR #4 |
+| 10 | Sprint 6 | 9 | `crud-vendedor` | CRUD Vendedor (con FK) | Est2 | Merge #4 |
 | 11 | Sprint 6 | 9 | `actualizar-navmenu` | NavMenu completo | Est3 | - |
 | 12 | Sprint 7 | 10 | `sp-service` | SpService para SPs | Est1 | - |
 | 13 | Sprint 7 | 10 | `actualizar-home` | Home actualizado | Est3 | - |
-| 14 | Sprint 7 | 10 | `crud-factura` | Factura maestro-detalle | Est2 | PR #12 |
+| 14 | Sprint 7 | 10 | `crud-factura` | Factura maestro-detalle | Est2 | Merge #12 |
 
 ---
 
@@ -652,8 +652,8 @@ FrontBlazorTutorial/
 
 ### Resumen de carga por estudiante
 
-| Estudiante | Archivos creados | Archivos modificados | PRs |
-|------------|-----------------|---------------------|-----|
+| Estudiante | Archivos creados | Archivos modificados | Merges |
+|------------|-----------------|---------------------|--------|
 | **Est1** | ApiService.cs, SpService.cs, Producto.razor, Empresa.razor, Ruta.razor | Program.cs, appsettings.json, MainLayout.razor, NavMenu.razor, Home.razor | 7 |
 | **Est2** | Persona.razor, Cliente.razor, Vendedor.razor, Factura.razor | - | 4 |
 | **Est3** | Usuario.razor, Rol.razor | NavMenu.razor, Home.razor | 4 |
@@ -673,7 +673,7 @@ dotnet build                               # verificar que compila
 git add .                                  # agregar todos los cambios
 git commit -m "feat: descripción del cambio"  # crear commit con mensaje descriptivo
 git push -u origin nombre-rama             # subir rama a GitHub
-# Luego: crear PR en GitHub, pedir revision, merge
+# Estudiante 1 fusiona: git fetch origin + git merge origin/nombre-rama + git push origin main
 
 # --- Comandos para traer cambios de main a una rama existente ---
 git fetch origin                           # descargar cambios de GitHub sin aplicarlos

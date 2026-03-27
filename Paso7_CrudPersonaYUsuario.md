@@ -273,7 +273,7 @@ La estructura y la lógica son idénticas. Solo cambian el nombre de la tabla y 
 dotnet build
 ```
 
-### 4. Subir cambios y crear PR
+### 4. Subir cambios y merge
 
 ```bash
 git add .
@@ -281,11 +281,7 @@ git commit -m "Agregar página CRUD Persona"
 git push -u origin crud-persona
 ```
 
-Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `crud-persona` → `main`. Si no aparece: pestaña **Pull requests** → **New pull request**.
-
-**Estudiante 1** revisa y aprueba el PR, luego hace merge.
-
-Después del merge, GitHub muestra un botón **Delete branch**. Se recomienda hacer clic para borrar la branch `crud-persona` del repositorio remoto. Esto no borra el código — el código ya está seguro en `main`. Solo elimina la branch que ya cumplió su propósito, para no acumular branches viejas.
+Después, **Estudiante 1** fusiona desde la terminal con `git fetch origin` + `git merge origin/crud-persona` + `git push origin main`.
 
 ---
 
@@ -527,7 +523,7 @@ Después del merge, GitHub muestra un botón **Delete branch**. Se recomienda ha
 dotnet build
 ```
 
-### 4. Subir cambios y crear PR
+### 4. Subir cambios y merge
 
 ```bash
 git add .
@@ -535,17 +531,13 @@ git commit -m "Agregar página CRUD Usuario"
 git push -u origin crud-usuario
 ```
 
-Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `crud-usuario` → `main`. Si no aparece: pestaña **Pull requests** → **New pull request**.
-
-**Estudiante 1** revisa y aprueba el PR, luego hace merge.
-
-Después del merge, GitHub muestra un botón **Delete branch**. Se recomienda hacer clic para borrar la branch `crud-usuario` del repositorio remoto. Esto no borra el código — el código ya está seguro en `main`. Solo elimina la branch que ya cumplió su propósito.
+Después, **Estudiante 1** fusiona desde la terminal con `git fetch origin` + `git merge origin/crud-usuario` + `git push origin main`.
 
 ---
 
 ## Después de los dos merges
 
-Una vez que ambos PRs estén mergeados, **los tres estudiantes** actualizan su main:
+Una vez que ambas ramas estén fusionadas, **los tres estudiantes** actualizan su main:
 
 ```bash
 git checkout main
@@ -560,19 +552,7 @@ Ahora el proyecto tiene 3 páginas CRUD funcionando: Producto, Persona y Usuario
 
 Después de hacer merge y borrar las ramas, el trabajo no se pierde. Hay varias formas de ver qué hizo cada estudiante:
 
-### Pull Requests cerrados (la mejor forma)
-
-En GitHub → pestaña **Pull requests** → clic en **Closed**.
-
-Ahí aparece cada PR con:
-- Quién lo creó
-- Qué archivos cambió
-- Los commits incluidos
-- Comentarios y revisiones
-
-Los PRs cerrados **no se borran nunca**. Son la mejor evidencia del trabajo de cada estudiante.
-
-### Historial de commits
+### Historial de commits (la mejor forma)
 
 En GitHub → pestaña **Code** → clic en **"X Commits"** (arriba a la derecha).
 
@@ -590,15 +570,13 @@ Muestra los commits de un estudiante específico.
 
 Mientras las ramas existan, se pueden ver en GitHub → **Code** → clic en el dropdown que dice `main` → ahí aparecen todas las ramas. Al seleccionar una, se ve el código tal como estaba en esa rama.
 
-Pero una vez que se borran, ya no se pueden ver. Por eso **los PRs cerrados son mejor referencia** — las ramas son temporales, los PRs son permanentes.
-
 ---
 
 ## Problemas comunes
 
 ### "Creé la branch antes de hacer pull y no tengo los cambios de main"
 
-Esto pasa cuando un estudiante crea su branch **antes** de actualizar main con `git pull`. La branch se crea desde un main viejo y no tiene los cambios de los PRs anteriores (ApiService, Layout, Producto, etc.).
+Esto pasa cuando un estudiante crea su branch **antes** de actualizar main con `git pull`. La branch se crea desde un main viejo y no tiene los cambios de los merges anteriores (ApiService, Layout, Producto, etc.).
 
 **Síntoma:** la branch solo tiene los commits iniciales (proyecto Blazor + .gitignore) y le faltan archivos como `Services/ApiService.cs` o `Components/Pages/Producto.razor`.
 
@@ -634,19 +612,6 @@ git reset --hard origin/main
 ```
 
 Ahora el commit solo está en la branch nueva y main está limpio.
-
-### "Git dice 'Everything up-to-date' pero no aparece el PR"
-
-Esto pasa cuando la branch en GitHub no tiene cambios nuevos respecto a main. Puede ser porque:
-- El commit se perdió (se hizo `reset --hard` antes de crear la branch)
-- La branch se creó desde un punto que ya estaba en main
-
-**Solución:** verificar que la branch tiene el commit con:
-```bash
-git log --oneline nombre-de-la-branch -5
-```
-
-Si el commit no aparece, hay que volver a crear el archivo, hacer commit y push.
 
 ---
 

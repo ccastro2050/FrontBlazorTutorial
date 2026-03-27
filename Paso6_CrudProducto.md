@@ -248,7 +248,7 @@ dotnet build
 
 ---
 
-## 7. Subir cambios, PR y merge
+## 7. Subir cambios y merge
 
 ```bash
 git add .
@@ -256,7 +256,12 @@ git commit -m "Agregar página CRUD Producto"
 git push -u origin crud-producto-página
 ```
 
-Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `crud-producto-página` → `main`. Si no aparece el botón: ir a la pestaña **Pull requests** → **New pull request**. Después, **Estudiante 1** va a la pestaña **Pull requests**, abre el PR, revisa en **Files changed**, y hace **Merge pull request** → **Confirm merge**.
+Después, **Estudiante 1** fusiona desde la terminal:
+```bash
+git fetch origin
+git merge origin/crud-producto-página
+git push origin main
+```
 
 Después del merge, **Estudiante 2 y 3** actualizan:
 ```bash

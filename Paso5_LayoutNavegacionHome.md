@@ -238,7 +238,7 @@ Debe mostrar **"0 Errores"**.
 
 ---
 
-## 6. Subir cambios, PR y merge
+## 6. Subir cambios y merge
 
 ```bash
 git add .
@@ -246,9 +246,12 @@ git commit -m "Configurar layout, navegacion y página Home"
 git push -u origin layout-navegacion-home
 ```
 
-Después en GitHub:
-1. Crear Pull Request: `layout-navegacion-home` → `main`
-2. Aprobar y hacer **Merge**
+Después, **Estudiante 1** fusiona desde la terminal:
+```bash
+git fetch origin
+git merge origin/layout-navegacion-home
+git push origin main
+```
 
 Después del merge, **Estudiante 2 y Estudiante 3** deben actualizar:
 

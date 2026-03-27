@@ -10,13 +10,13 @@ Los tres estudiantes trabajan **en paralelo**, cada uno en su propia rama.
 
 ---
 
-## ¿En qué orden se hacen los PRs?
+## ¿En qué orden se fusionan las ramas?
 
-Los PRs se pueden hacer **en cualquier orden** cuando cada uno toca archivos diferentes y no hay dependencias entre ellos. En este paso, Ruta.razor, Vendedor.razor y NavMenu.razor son archivos independientes — no se chocan.
+Las ramas se pueden fusionar **en cualquier orden** cuando cada una toca archivos diferentes y no hay dependencias entre ellas. En este paso, Ruta.razor, Vendedor.razor y NavMenu.razor son archivos independientes — no se chocan.
 
 En el Paso 8, en cambio, **sí importaba el orden**: Cliente necesitaba que Empresa y Persona ya estuvieran en main, porque su código carga datos de esas tablas con `Api.ListarAsync("empresa")`.
 
-**Regla simple para saber si hay dependencia:** si la página hace `Api.ListarAsync("otra_tabla")` para llenar un select, esa otra tabla debe tener su CRUD mergeado primero. Si la página solo usa su propia tabla, no depende de nadie y el orden no importa.
+**Regla simple para saber si hay dependencia:** si la página hace `Api.ListarAsync("otra_tabla")` para llenar un select, esa otra tabla debe tener su CRUD fusionado primero. Si la página solo usa su propia tabla, no depende de nadie y el orden no importa.
 
 ---
 
@@ -247,7 +247,7 @@ var resultado = await Api.ActualizarAsync("ruta", "ruta", campoRuta, datos);
 
 El primer `"ruta"` es el nombre de la tabla. El segundo `"ruta"` es el nombre de la columna clave. No es un error — así se llama el campo en la base de datos.
 
-### 3. Verificar, subir y crear PR
+### 3. Verificar y subir
 
 ```bash
 dotnet build
@@ -256,8 +256,7 @@ git commit -m "Agregar página CRUD Ruta"
 git push -u origin crud-ruta
 ```
 
-Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `crud-ruta` → `main`. Si no aparece el botón: ir a la pestaña **Pull requests** → **New pull request**. Después, **Estudiante 1** va a la pestaña **Pull requests**, abre el PR, revisa en **Files changed**, y hace **Merge pull request** → **Confirm merge**.
-Después del merge, clic en **Delete branch**.
+Después, **Estudiante 1** fusiona desde la terminal con `git fetch origin` + `git merge origin/crud-ruta` + `git push origin main`.
 
 ---
 
@@ -505,7 +504,7 @@ Vendedor es similar a Cliente: tiene una **llave foránea** a persona y un **id 
 
 Vendedor usa el mismo patrón que Cliente (Paso 8): id autoincremental, FK a persona con select, función `ObtenerNombrePersona`. La diferencia es que Vendedor tiene `carnet` (int) y `direccion` (string) en lugar de `credito` y `fkcodempresa`.
 
-### 3. Verificar, subir y crear PR
+### 3. Verificar y subir
 
 ```bash
 dotnet build
@@ -514,8 +513,7 @@ git commit -m "Agregar página CRUD Vendedor"
 git push -u origin crud-vendedor
 ```
 
-Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `crud-vendedor` → `main`. Si no aparece el botón: ir a la pestaña **Pull requests** → **New pull request**. Después, **Estudiante 1** va a la pestaña **Pull requests**, abre el PR, revisa en **Files changed**, y hace **Merge pull request** → **Confirm merge**.
-Después del merge, clic en **Delete branch**.
+Después, **Estudiante 1** fusiona desde la terminal con `git fetch origin` + `git merge origin/crud-vendedor` + `git push origin main`.
 
 ---
 
@@ -635,7 +633,7 @@ Solo 3 bloques `<div class="nav-item">` nuevos al final de la lista, antes del c
 - `href="vendedor"` → abre `/vendedor`
 - `href="factura"` → abre `/factura` (la página aún no existe, se creará en el Paso 10)
 
-### 3. Verificar, subir y crear PR
+### 3. Verificar y subir
 
 ```bash
 dotnet build
@@ -644,8 +642,7 @@ git commit -m "Agregar links de Cliente, Vendedor y Factura al menu"
 git push -u origin actualizar-navmenu
 ```
 
-Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `actualizar-navmenu` → `main`. Si no aparece el botón: ir a la pestaña **Pull requests** → **New pull request**. Después, **Estudiante 1** va a la pestaña **Pull requests**, abre el PR, revisa en **Files changed**, y hace **Merge pull request** → **Confirm merge**.
-Después del merge, clic en **Delete branch**.
+Después, **Estudiante 1** fusiona desde la terminal con `git fetch origin` + `git merge origin/actualizar-navmenu` + `git push origin main`.
 
 ---
 

@@ -10,7 +10,7 @@ Este paso se divide en **3 tareas con dependencias**:
 | 2do | **Estudiante 3** | Actualizar `Home.razor` con todas las tablas | `actualizar-home` | Nada |
 | 3ro | **Estudiante 2** | Crear `Factura.razor` | `crud-factura` | SpService (Est1) |
 
-**Importante:** Estudiante 2 debe esperar a que el PR de Estudiante 1 esté mergeado antes de subir su PR, porque Factura.razor usa SpService.
+**Importante:** Estudiante 2 debe esperar a que Estudiante 1 fusione su rama en main antes de subir su rama, porque Factura.razor usa SpService.
 
 Estudiante 1 y Estudiante 3 pueden trabajar en paralelo.
 
@@ -160,7 +160,7 @@ builder.Services.AddScoped<FrontBlazorTutorial.Services.SpService>();
 
 Esta línea le dice a Blazor que SpService existe y puede inyectarse con `@inject`.
 
-### 4. Verificar, subir y crear PR
+### 4. Verificar y subir
 
 ```bash
 dotnet build
@@ -169,8 +169,12 @@ git commit -m "Agregar SpService para stored procedures"
 git push -u origin sp-service
 ```
 
-Quien hizo push crea el PR en GitHub (botón amarillo "Compare & pull request"): `sp-service` → `main`. **Estudiante 1** revisa en **Files changed**, hace **Merge pull request** → **Confirm merge** → **Delete branch**.
-Después del merge, clic en **Delete branch**.
+Después, **Estudiante 1** fusiona desde la terminal:
+```bash
+git fetch origin
+git merge origin/sp-service
+git push origin main
+```
 
 ---
 
@@ -192,7 +196,7 @@ Y cambiarla por:
 <strong>Tablas disponibles:</strong> Producto, Persona, Usuario, Empresa, Rol, Ruta, Cliente, Vendedor, Factura.
 ```
 
-### 2. Verificar, subir y crear PR
+### 2. Verificar y subir
 
 ```bash
 dotnet build
@@ -201,14 +205,18 @@ git commit -m "Actualizar Home con lista completa de tablas"
 git push -u origin actualizar-home
 ```
 
-Quien hizo push crea el PR en GitHub (botón amarillo "Compare & pull request"): `actualizar-home` → `main`. **Estudiante 1** revisa en **Files changed**, hace **Merge pull request** → **Confirm merge** → **Delete branch**.
-Después del merge, clic en **Delete branch**.
+Después, **Estudiante 1** fusiona desde la terminal:
+```bash
+git fetch origin
+git merge origin/actualizar-home
+git push origin main
+```
 
 ---
 
 ## Estudiante 2 — Crear Factura.razor
 
-**Requisito:** el PR de SpService (Estudiante 1) debe estar mergeado antes de empezar. Actualizar la rama:
+**Requisito:** la rama de SpService (Estudiante 1) debe estar fusionada en main antes de empezar. Actualizar la rama:
 
 ```bash
 git fetch origin
@@ -825,7 +833,7 @@ Esto requiere Stored Procedures porque en una sola operación se debe:
 | `sp_actualizar_factura_y_productosporfactura` | Editar | `p_numero`, `p_fkidcliente`, `p_fkidvendedor`, `p_productos` (JSON), `p_resultado` |
 | `sp_borrar_factura_y_productosporfactura` | Eliminar | `p_numero`, `p_resultado` |
 
-### 3. Verificar, subir y crear PR
+### 3. Verificar y subir
 
 ```bash
 dotnet build
@@ -834,8 +842,12 @@ git commit -m "Agregar página Factura con stored procedures"
 git push -u origin crud-factura
 ```
 
-Quien hizo push crea el PR en GitHub (botón amarillo "Compare & pull request"): `crud-factura` → `main`. **Estudiante 1** revisa en **Files changed**, hace **Merge pull request** → **Confirm merge** → **Delete branch**.
-Después del merge, clic en **Delete branch**.
+Después, **Estudiante 1** fusiona desde la terminal:
+```bash
+git fetch origin
+git merge origin/crud-factura
+git push origin main
+```
 
 ---
 

@@ -245,15 +245,11 @@ Estudiante 2 o 3                              Estudiante 1
   6. git commit -m "feat: descripción"              |
   7. git push -u origin feature/nombre              |
      |                                              |
-  8. Ve el botón amarillo en GitHub                 |
-     "Compare & pull request"                       |
-     Crea el Pull Request                           |
-     |                                              |
      └──── le avisa a Estudiante 1 ────────────────→|
                                                     |
-                                         9.  Va a la pestaña Pull requests
-                                         10. Abre el PR, revisa en Files changed
-                                         11. Merge pull request → Confirm merge
+                                         8.  git fetch origin
+                                         9.  git merge origin/feature/nombre
+                                         10. git push origin main
                                                     |
                                          Los cambios quedan en main
 ```
@@ -283,7 +279,7 @@ Estudiante 2 o 3                              Estudiante 1
 | 1 | 1-3 | Crear repo + proyecto + GitHub | Clonar y verificar | Clonar y verificar |
 | 2 | 4-5 | ApiService + Layout + Home | Pull y verificar | Pull y verificar |
 | 3 | 6 | CRUD Producto | Pull y verificar | Pull y verificar |
-| 4 | 7 | Revisar PRs + merge | CRUD Persona | CRUD Usuario |
+| 4 | 7 | Fusionar ramas | CRUD Persona | CRUD Usuario |
 | 5 | 8 | CRUD Empresa | CRUD Cliente | CRUD Rol |
 | 6 | 9 | CRUD Ruta | CRUD Vendedor | NavMenu |
 | 7 | 10 | Home actualizado | CRUD Factura | Revisar + verificar |

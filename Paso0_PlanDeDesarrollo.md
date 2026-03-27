@@ -21,7 +21,7 @@ main (siempre estable, código que funciona)
 
 **Reglas:**
 - `main` siempre debe funcionar (se puede ejecutar `dotnet run` sin errores)
-- Nadie hace push directo a `main` — todo entra por Pull Request
+- Nadie hace push directo a `main` — todo se fusiona desde la terminal con `git fetch` + `git merge`
 - Cada tarea tiene su propia rama
 - Las ramas se borran después del merge
 
@@ -86,28 +86,11 @@ style: aplicar formato consistente en usings de Program.cs
 docs: actualizar README con instrucciones de instalación
 ```
 
-### 1.4 Convenciones para Pull Requests
+### 1.4 Convenciones para fusión de ramas
 
-- **Título claro:** describir qué hace el PR en una oración
-- **Descripción:** explicar qué se hizo, por qué y cómo probarlo
-- **Un PR por tarea:** no mezclar varias funcionalidades en un PR
-- **Revisar antes de aprobar:** al menos una persona revisa el código
-
-**Ejemplo de PR bien hecho:**
-
-```
-Título: Agregar página CRUD Producto
-
-Descripción:
-- Se creó Components/Pages/Producto.razor con tabla y formulario
-- Se registró la ruta @page "/producto"
-- Permite listar, crear, editar y eliminar productos
-
-¿Cómo probarlo?
-1. Ejecutar dotnet run
-2. Ir a http://localhost:5235/producto
-3. Verificar que se listan los productos de la BD
-```
+- Estudiante 1 fusiona las ramas de los demás desde la terminal con `git fetch origin` + `git merge origin/rama`
+- Cada tarea va en su propia rama y se sube con `git push`
+- Antes de fusionar, verificar que compila con `dotnet build`
 
 ### 1.5 Flujo de trabajo diario
 
@@ -119,55 +102,28 @@ Descripción:
 5. git add .
 6. git commit -m "feat: descripción"
 7. git push -u origin feature/mi-tarea
-8. Quien hizo push crea el PR en GitHub (botón amarillo "Compare & pull request")
-9. Estudiante 1 revisa y hace merge
-10. Borrar la rama
+8. Estudiante 1 fusiona desde la terminal:
+   git fetch origin
+   git merge origin/feature/mi-tarea
+   git push origin main
 ```
 
-### 1.6 Aclaraciones importantes sobre Pull Requests
+### 1.6 Cómo fusiona Estudiante 1
 
-> **¿Qué es un Pull Request (PR)?** Es una solicitud para integrar los cambios de una rama a `main`. En vez de meter código directo a `main`, el PR permite:
-> - Ver exactamente qué archivos cambiaron (línea por línea)
-> - Que el dueño del repositorio (Estudiante 1) revise el código antes de integrarlo
-> - Tener un historial de qué se integró, cuándo y quién lo hizo
->
-> **¿Quién crea el PR?** Lo crea quien hizo el push, porque GitHub le muestra un botón amarillo solo a esa persona. Si Estudiante 1 hizo push, Estudiante 1 crea el PR. Si Estudiante 2 o 3 hicieron push, ellos crean el PR.
->
-> **¿Quién hace merge?** Solo Estudiante 1, porque es el dueño del repositorio y de la rama `main`.
->
-> **¿Qué pasa si Estudiante 1 no acepta el PR?** El código se queda en la rama pero no entra a `main`. El PR queda abierto en GitHub esperando. Estudiante 1 puede escribir un comentario explicando qué hay que corregir, y el estudiante que hizo el push puede hacer más commits en la misma rama para arreglar el problema. Cuando Estudiante 1 esté conforme, hace merge.
->
-> **¿Qué pasa si el estudiante no crea el PR después de hacer push?** La rama queda subida en GitHub pero nadie la revisa. El código no entra a `main` y los demás compañeros no pueden usar esos cambios. Sin PR, es como si el trabajo no existiera para el equipo.
+Cuando un estudiante sube su rama con `git push`, Estudiante 1 fusiona desde la terminal:
 
-### 1.7 Paso a paso: crear un PR en GitHub
+```bash
+git checkout main
+git fetch origin
+git merge origin/nombre-de-la-rama
+git push origin main
+```
 
-1. Ir al repositorio en GitHub
+- `git fetch origin` trae todas las ramas del remoto sin modificar el código local.
+- `git merge origin/nombre-de-la-rama` fusiona esa rama en `main`.
+- `git push origin main` sube `main` actualizado a GitHub.
 
-2. GitHub muestra un banner amarillo que dice algo como: **"feature/mi-tarea had recent pushes"** con un botón **Compare & pull request**.
-
-> Ese banner aparece porque GitHub detectó que alguien acaba de subir una rama nueva. "Recent pushes" significa "subidas recientes". El botón **Compare & pull request** significa: "comparar los cambios de esa rama contra `main` y crear una solicitud para integrarlos". Hacer clic en ese botón.
-
-3. Si no aparece el banner (puede pasar si pasó mucho tiempo desde el push): ir a la pestaña **Pull requests** (arriba en el repositorio) → **New pull request** → en el dropdown "compare" seleccionar la rama. Esto hace lo mismo que el botón amarillo pero de forma manual.
-
-4. GitHub muestra un formulario. Llenar título y descripción del cambio.
-
-5. Hacer clic en **Create pull request**.
-
-> Esto NO integra los cambios todavía. Solo crea la solicitud. GitHub ahora muestra una página con el PR abierto donde se puede ver exactamente qué archivos cambiaron y qué líneas se agregaron o modificaron. Aquí es donde Estudiante 1 revisaría el código antes de aprobarlo.
-
-6. **Estudiante 1** revisa los cambios en la pestaña **Files changed**. Ahí se ven las líneas nuevas en verde y las eliminadas en rojo.
-
-7. Hacer clic en **Merge pull request**.
-
-> **¿Qué es merge?** Merge significa "fusionar". Al hacer clic, le estamos diciendo a GitHub: "toma todos los cambios de esa rama e intégralos a `main`". Después de esto, `main` tendrá el código nuevo.
-
-8. Hacer clic en **Confirm merge** para confirmar.
-
-9. GitHub muestra un botón **Delete branch**. Hacer clic.
-
-> Esto solo borra la rama en GitHub, no borra el código (el código ya está seguro en `main`). Es para no acumular ramas viejas que ya se integraron. Si no se borra, no pasa nada malo, solo queda una rama huérfana que ensucia la lista de ramas.
-
-10. **¿Y si después quiero ver qué hizo cada estudiante?** Aunque la rama se borró, el Pull Request queda guardado para siempre en GitHub. Ir a la pestaña **Pull requests** → **Closed** y ahí aparecen todos los PRs anteriores con el nombre de quien lo creó, la fecha, y todos los archivos que se cambiaron línea por línea.
+> Si al hacer merge aparece una pantalla de vim pidiendo un mensaje, escribir `:wq` y presionar Enter.
 
 ---
 
@@ -229,7 +185,7 @@ FrontBlazorTutorial/
 ### 2.5 Objetivos
 
 1. Construir un frontend funcional en Blazor que consuma la API genérica
-2. Practicar trabajo colaborativo con GitHub (ramas, PRs, merge)
+2. Practicar trabajo colaborativo con GitHub (ramas, merge desde terminal)
 3. Aplicar el patrón de separación de responsabilidades (Pages / Services)
 4. Implementar operaciones maestro-detalle con Stored Procedures
 
@@ -280,10 +236,10 @@ Se usa **Scrum adaptado** para un equipo de 3 personas:
 | Rol Scrum | Quién | Responsabilidades en GitHub |
 |-----------|-------|----------------------------|
 | Product Owner | Profesor / Tutor | Define qué se construye, prioriza historias |
-| Scrum Master | Estudiante 1 | Administra el repo, revisa PRs, hace merge, resuelve conflictos |
-| Desarrollador | Estudiante 1 | Trabaja en sus ramas, crea PRs |
-| Desarrollador | Estudiante 2 | Trabaja en sus ramas, crea PRs |
-| Desarrollador | Estudiante 3 | Trabaja en sus ramas, crea PRs |
+| Scrum Master | Estudiante 1 | Administra el repo, fusiona ramas desde la terminal, resuelve conflictos |
+| Desarrollador | Estudiante 1 | Trabaja en sus ramas, sube sus ramas |
+| Desarrollador | Estudiante 2 | Trabaja en sus ramas, sube sus ramas |
+| Desarrollador | Estudiante 3 | Trabaja en sus ramas, sube sus ramas |
 
 ---
 
@@ -308,7 +264,7 @@ Yo como profesor, quiero que el equipo cree un proyecto Blazor Server, lo suba a
 **Criterios de aceptación:**
 - El proyecto se ejecuta con `dotnet run` y muestra una página en el navegador
 - El repositorio está en GitHub con los 3 estudiantes como colaboradores
-- La branch `main` está protegida (solo se puede integrar por PR)
+- Cada tarea tiene su propia rama y se fusiona desde la terminal
 - Cada estudiante puede clonar y ejecutar
 - El `.gitignore` excluye `bin/` y `obj/`
 
@@ -592,7 +548,7 @@ Antes de empezar a codificar, el equipo debe reunirse para definir:
 - [ ] **Acordar convenciones de commits** — definir formato de mensajes
 - [ ] **Revisar las historias de usuario** — entender qué hace cada uno
 - [ ] **Asignar historias a cada sprint** — ver el cronograma (sección 5)
-- [ ] **Definir flujo de PRs** — quién revisa, quién aprueba, quién hace merge
+- [ ] **Definir flujo de merge** — quién fusiona las ramas desde la terminal
 - [ ] **Definir canal de comunicación** — WhatsApp, Discord, Teams, etc.
 - [ ] **Definir horario de trabajo** — cuándo se conectan, cuándo se reúnen
 
@@ -601,9 +557,9 @@ Antes de empezar a codificar, el equipo debe reunirse para definir:
 | Pregunta | Ejemplo de respuesta |
 |----------|---------------------|
 | ¿Quién administra el repo? | Estudiante 1 |
-| ¿Quién revisa los PRs? | Estudiante 1 revisa los de 2 y 3. Estudiante 2 o 3 revisan los de 1 |
+| ¿Quién fusiona las ramas? | Estudiante 1 fusiona desde la terminal |
 | ¿Qué pasa si hay conflicto? | Se resuelve en GitHub o se pide ayuda al Scrum Master |
-| ¿Cómo nos avisamos que un PR está listo? | Mensaje en el grupo de WhatsApp |
+| ¿Cómo nos avisamos que una rama está lista? | Mensaje en el grupo de WhatsApp |
 | ¿Cada cuánto hacemos pull de main? | Antes de crear cada rama nueva |
 | ¿Qué hacemos si alguien se atrasa? | Se redistribuyen tareas en el siguiente sprint |
 
@@ -615,11 +571,11 @@ Antes de empezar a codificar, el equipo debe reunirse para definir:
 |--------|------|-------------|------|------|------|-------|
 | **Sprint 1** | 1-3 | Proyecto + GitHub + ramas | Crear repo, invitar | Clonar, crear rama | Clonar, crear rama | 3 |
 | **Sprint 2** | 4-5 | ApiService + Layout + Home | ApiService + Layout + Home | Pull y verificar | Pull y verificar | 4 |
-| **Sprint 3** | 6 | CRUD Producto | CRUD Producto + PR | Pull y verificar | Pull y verificar | 3 |
-| **Sprint 4** | 7 | CRUD Persona + Usuario | Revisar PRs + merge | CRUD Persona + PR | CRUD Usuario + PR | 4 |
-| **Sprint 5** | 8 | CRUD Empresa + Cliente + Rol | CRUD Empresa + PR | CRUD Cliente + PR | CRUD Rol + PR | 6 |
-| **Sprint 6** | 9 | CRUD Ruta + Vendedor + NavMenu | CRUD Ruta + PR | CRUD Vendedor + PR | NavMenu + PR | 4 |
-| **Sprint 7** | 10 | Factura + Home | Home actualizado + PR | CRUD Factura + PR | Revisar + verificar | 6 |
+| **Sprint 3** | 6 | CRUD Producto | CRUD Producto | Pull y verificar | Pull y verificar | 3 |
+| **Sprint 4** | 7 | CRUD Persona + Usuario | Fusionar ramas | CRUD Persona | CRUD Usuario | 4 |
+| **Sprint 5** | 8 | CRUD Empresa + Cliente + Rol | CRUD Empresa | CRUD Cliente | CRUD Rol | 6 |
+| **Sprint 6** | 9 | CRUD Ruta + Vendedor + NavMenu | CRUD Ruta | CRUD Vendedor | NavMenu | 4 |
+| **Sprint 7** | 10 | Factura + Home | Home actualizado | CRUD Factura | Revisar + verificar | 6 |
 | | | | | | **Total estimado:** | **30** |
 
 ### Distribución de carga por estudiante
@@ -630,7 +586,7 @@ Antes de empezar a codificar, el equipo debe reunirse para definir:
 | Estudiante 2 | HU-05, HU-09, HU-11, HU-13 | 17 |
 | Estudiante 3 | HU-06, HU-08, HU-12 + Home | 6 |
 
-**Nota:** Estudiante 1 tiene más historias pero son más simples. Estudiante 2 tiene menos historias pero más complejas (llaves foráneas, factura). Estudiante 3 tiene menos carga y puede apoyar en revisión de PRs y pruebas.
+**Nota:** Estudiante 1 tiene más historias pero son más simples. Estudiante 2 tiene menos historias pero más complejas (llaves foráneas, factura). Estudiante 3 tiene menos carga y puede apoyar en pruebas y verificación.
 
 ---
 
@@ -644,9 +600,8 @@ Antes de empezar a codificar, el equipo debe reunirse para definir:
 | Crear `Components/Pages/Usuario.razor` | Estudiante 3 | `crud-usuario` | Pendiente | Sprint 3 mergeado |
 | Commit + push Persona | Estudiante 2 | `crud-persona` | Pendiente | Archivos creados |
 | Commit + push Usuario | Estudiante 3 | `crud-usuario` | Pendiente | Archivos creados |
-| Crear PR Persona | Estudiante 2 | - | Pendiente | Push |
-| Crear PR Usuario | Estudiante 3 | - | Pendiente | Push |
-| Revisar y merge ambos PRs | Estudiante 1 | - | Pendiente | PRs creados |
+| Estudiante 1 fusiona Persona: fetch + merge | Estudiante 1 | - | Pendiente | Push Persona |
+| Estudiante 1 fusiona Usuario: fetch + merge | Estudiante 1 | - | Pendiente | Push Usuario |
 | Pull de main (los 3) | Todos | - | Pendiente | Merges |
 
 ### Sprint 5 (ejemplo con dependencias)
@@ -656,12 +611,12 @@ Antes de empezar a codificar, el equipo debe reunirse para definir:
 | Crear CRUD Empresa | Estudiante 1 | `crud-empresa` | Pendiente | - |
 | Crear CRUD Rol | Estudiante 3 | `crud-rol` | Pendiente | - |
 | Crear CRUD Cliente | Estudiante 2 | `crud-cliente` | Pendiente | **Empresa mergeado** |
-| PR + merge Empresa | Estudiante 1 | - | Pendiente | Empresa creado |
-| PR + merge Rol | Estudiante 1 | - | Pendiente | Rol creado |
+| Estudiante 1 fusiona Empresa: fetch + merge | Estudiante 1 | - | Pendiente | Empresa creado |
+| Estudiante 1 fusiona Rol: fetch + merge | Estudiante 1 | - | Pendiente | Rol creado |
 | fetch + merge origin/main | Estudiante 2 | `crud-cliente` | Pendiente | Empresa mergeado |
-| PR + merge Cliente | Estudiante 1 | - | Pendiente | Cliente creado |
+| Estudiante 1 fusiona Cliente: fetch + merge | Estudiante 1 | - | Pendiente | Cliente creado |
 
-**Notar:** Cliente depende de Empresa. Estudiante 2 debe esperar a que Empresa esté mergeado, luego hacer `git fetch origin && git merge origin/main` en su rama antes de subir su PR.
+**Notar:** Cliente depende de Empresa. Estudiante 2 debe esperar a que Empresa esté mergeado, luego hacer `git fetch origin && git merge origin/main` en su rama antes de subir sus cambios.
 
 ---
 
@@ -674,7 +629,7 @@ Este es un ejemplo de lo que el equipo debe definir en la reunión inicial:
 | **Prefijo de ramas** | `feature/`, `fix/`, `docs/` |
 | **Formato de commit** | `tipo: descripción` (feat, fix, docs, refactor) |
 | **Quién hace merge** | Estudiante 1 (Scrum Master) |
-| **Quién revisa PRs** | Est1 revisa los de Est2 y Est3. Est2 o Est3 revisan los de Est1 |
+| **Quién fusiona ramas** | Estudiante 1 fusiona desde la terminal con fetch + merge |
 | **Canal de comunicación** | Grupo de WhatsApp |
 | **Cuándo hacer pull** | Siempre antes de crear una rama nueva |
 | **Qué hacer si hay conflicto** | Resolverlo en GitHub o pedir ayuda |

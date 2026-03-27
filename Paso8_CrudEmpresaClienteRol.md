@@ -8,13 +8,13 @@ No pasa nada. Cada `push` va a su propia branch, no a `main`. Las branches son i
 
 Por ejemplo, si Estudiante 3 hace push de `crud-rol` y Estudiante 2 hace push de `crud-cliente` al mismo tiempo, cada uno está en su propia branch. No se chocan.
 
-Los PRs se pueden hacer en cualquier orden y momento. Lo único que importa es:
+Los merges se pueden hacer en cualquier orden y momento. Lo único que importa es:
 
 - **Archivos diferentes = sin conflicto.** Como cada estudiante crea un archivo nuevo distinto (Empresa.razor, Cliente.razor, Rol.razor), no hay conflicto de merge.
 - **Si dos estudiantes modifican el mismo archivo**, ahí sí puede haber un conflicto. Pero en este paso eso no pasa.
 - **Si un CRUD depende de otro** (como Cliente depende de Empresa y Persona), conviene hacer merge del que no depende primero.
 
-Resumen: pueden acumularse varias branches con push sin PR y está bien. Cada branch es un mundo aparte hasta que se hace merge a `main`.
+Resumen: pueden acumularse varias branches con push y está bien. Cada branch es un mundo aparte hasta que se hace merge a `main`.
 
 ---
 
@@ -258,7 +258,7 @@ Empresa es una tabla simple con solo 2 campos: `codigo` y `nombre`.
 
 Empresa es más simple que Producto: misma estructura, menos campos.
 
-### 3. Verificar, subir y crear PR
+### 3. Verificar y subir
 
 ```bash
 dotnet build
@@ -267,8 +267,7 @@ git commit -m "Agregar página CRUD Empresa"
 git push -u origin crud-empresa
 ```
 
-Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `crud-empresa` → `main`. Si no aparece el botón: ir a la pestaña **Pull requests** → **New pull request**. Después, **Estudiante 1** va a la pestaña **Pull requests**, abre el PR, revisa en **Files changed**, y hace **Merge pull request** → **Confirm merge**.
-Después del merge, clic en **Delete branch** para limpiar.
+Después, **Estudiante 1** fusiona desde la terminal con `git fetch origin` + `git merge origin/crud-empresa` + `git push origin main`.
 
 ---
 
@@ -487,7 +486,7 @@ Rol tiene una diferencia importante: la clave primaria es `id` (un número enter
 
 Notar que `campoId.ToString()` es necesario porque la API recibe la clave como string en la URL, aunque en la base de datos sea un número.
 
-### 3. Verificar, subir y crear PR
+### 3. Verificar y subir
 
 ```bash
 dotnet build
@@ -496,8 +495,7 @@ git commit -m "Agregar página CRUD Rol"
 git push -u origin crud-rol
 ```
 
-Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `crud-rol` → `main`. Si no aparece el botón: ir a la pestaña **Pull requests** → **New pull request**. Después, **Estudiante 1** va a la pestaña **Pull requests**, abre el PR, revisa en **Files changed**, y hace **Merge pull request** → **Confirm merge**.
-Después del merge, clic en **Delete branch** para limpiar.
+Después, **Estudiante 1** fusiona desde la terminal con `git fetch origin` + `git merge origin/crud-rol` + `git push origin main`.
 
 ---
 
@@ -821,21 +819,21 @@ La empresa es opcional (un cliente puede no pertenecer a ninguna empresa). Si el
 ["fkcodempresa"] = string.IsNullOrEmpty(campoFkcodempresa) ? null : campoFkcodempresa
 ```
 
-### 3. Importante: orden de los PRs
+### 3. Importante: orden de los merges
 
 El CRUD Cliente depende de que existan las tablas **persona** y **empresa** en el proyecto. Por eso:
 
-1. Primero debe hacerse merge del PR de **Empresa** (Estudiante 1)
+1. Primero Estudiante 1 debe fusionar la rama de **Empresa**
 2. Luego Estudiante 2 actualiza su rama con los cambios de main:
    ```bash
    git fetch origin
    git merge origin/main
    ```
-3. Después sube su PR de Cliente
+3. Después sube su rama de Cliente
 
-Si Estudiante 2 sube el PR antes de que Empresa esté en main, la página funcionará pero el select de empresas estará vacío hasta que se agreguen empresas.
+Si Estudiante 2 sube su rama antes de que Empresa esté en main, la página funcionará pero el select de empresas estará vacío hasta que se agreguen empresas.
 
-### 4. Verificar, subir y crear PR
+### 4. Verificar y subir
 
 ```bash
 dotnet build
@@ -844,8 +842,7 @@ git commit -m "Agregar página CRUD Cliente"
 git push -u origin crud-cliente
 ```
 
-Quien hizo push ve el botón amarillo "Compare & pull request" en GitHub y crea el PR: `crud-cliente` → `main`. Si no aparece el botón: ir a la pestaña **Pull requests** → **New pull request**. Después, **Estudiante 1** va a la pestaña **Pull requests**, abre el PR, revisa en **Files changed**, y hace **Merge pull request** → **Confirm merge**.
-Después del merge, clic en **Delete branch** para limpiar.
+Después, **Estudiante 1** fusiona desde la terminal con `git fetch origin` + `git merge origin/crud-cliente` + `git push origin main`.
 
 ---
 
@@ -864,9 +861,9 @@ Ahora el proyecto tiene 6 páginas CRUD funcionando: Producto, Persona, Usuario,
 
 ## ¿Cómo resolver conflictos de merge?
 
-Cuando dos branches modifican el **mismo archivo en las mismas líneas**, GitHub no puede hacer merge automáticamente y muestra un botón **Resolve conflicts** en el PR.
+Cuando dos branches modifican el **mismo archivo en las mismas líneas**, git no puede hacer merge automáticamente y muestra un conflicto.
 
-Al hacer clic, se abre un editor con marcas como estas:
+Al hacer merge, git marca los archivos con conflictos así:
 
 ```
 <<<<<<< crud-cliente
@@ -878,10 +875,10 @@ Al hacer clic, se abre un editor con marcas como estas:
 
 Esto significa: "tu branch dice una cosa, pero main dice otra". Para resolverlo:
 
-1. Borrar las tres líneas de marcas (`<<<<<<<`, `=======`, `>>>>>>>`)
-2. Dejar el código correcto — puede ser uno, el otro, o ambos combinados
-3. Clic en **Mark as resolved**
-4. Clic en **Commit merge**
+1. Abrir el archivo en el editor de texto
+2. Borrar las tres líneas de marcas (`<<<<<<<`, `=======`, `>>>>>>>`)
+3. Dejar el código correcto — puede ser uno, el otro, o ambos combinados
+4. Guardar, hacer `git add .` y `git commit`
 
 Ejemplo resuelto (dejando ambos):
 ```
@@ -891,7 +888,7 @@ Ejemplo resuelto (dejando ambos):
 
 **¿Cuándo pasa esto en este proyecto?** Casi nunca, porque cada estudiante crea archivos nuevos diferentes. Pero podría pasar si dos estudiantes modifican el mismo archivo existente (por ejemplo, `NavMenu.razor` para agregar un link al menú).
 
-**Tip:** para evitar conflictos, hagan merge de los PRs uno a la vez. Después de cada merge, los demás estudiantes pueden actualizar su branch con:
+**Tip:** para evitar conflictos, fusionen las ramas una a la vez. Después de cada merge, los demás estudiantes pueden actualizar su branch con:
 ```bash
 git fetch origin
 git merge origin/main

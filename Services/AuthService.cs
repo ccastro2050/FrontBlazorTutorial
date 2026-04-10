@@ -520,6 +520,113 @@ public class AuthService
     }
 
     // ══════════════════════════════════════════════════════════
+    // RECUPERAR CONTRASENA
+    // ══════════════════════════════════════════════════════════
+
+    // Set en memoria para rastrear usuarios que deben cambiar contrasena.
+    // Cuando se recupera, el email se agrega aqui.
+    // En el proximo login, se fuerza el cambio.
+    private static readonly HashSet<string> _emailsDebeCambiar = new();
+
+    /// <summary>
+    /// Recupera la contrasena de un usuario:
+    ///   1. Verifica que el email exista en la BD
+    ///   2. Genera contrasena temporal aleatoria (8 chars)
+    ///   3. La guarda encriptada con BCrypt en la BD
+    ///   4. Marca el email para forzar cambio en el proximo login
+    ///   5. Envia la temporal por correo SMTP (si esta configurado)
+    /// </summary>
+    public async Task<(bool ok, string msg)> RecuperarContrasena(string email, IConfiguration config)
+    {
+        try
+        {
+            // Verificar que el usuario existe
+            var pkUsuario = await ObtenerPK("usuario");
+            var usuarios = await Listar("usuario");
+            var existe = usuarios.Any(u =>
+                (u.GetValueOrDefault(pkUsuario)?.ToString() ?? "").Equals(email, StringComparison.OrdinalIgnoreCase));
+            if (!existe) return (false, "No se encontro una cuenta con ese correo.");
+
+            // Generar contrasena temporal: 1 mayuscula + 1 minuscula + 1 digito + 5 aleatorios
+            var rng = new Random();
+            var upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            var lower = "abcdefghijklmnopqrstuvwxyz";
+            var digits = "0123456789";
+            var all = upper + lower + digits;
+            var pwd = new string(new[] { upper[rng.Next(upper.Length)], lower[rng.Next(lower.Length)],
+                digits[rng.Next(digits.Length)] }.Concat(Enumerable.Range(0, 5)
+                .Select(_ => all[rng.Next(all.Length)])).ToArray());
+
+            // Guardar encriptada con BCrypt
+            var (okPwd, msgPwd) = await CambiarContrasenaInterno(email, pwd);
+            if (!okPwd) return (false, msgPwd);
+
+            // Marcar para forzar cambio
+            _emailsDebeCambiar.Add(email.ToLower());
+
+            // Enviar por correo SMTP
+            var smtpUser = config["Smtp:User"] ?? "";
+            var smtpPass = config["Smtp:Pass"] ?? "";
+            if (string.IsNullOrEmpty(smtpUser) || string.IsNullOrEmpty(smtpPass))
+                return (true, $"Contrasena restablecida pero SMTP no configurado. Temporal: {pwd}");
+
+            try
+            {
+                var smtpHost = config["Smtp:Host"] ?? "smtp.gmail.com";
+                var smtpPort = int.Parse(config["Smtp:Port"] ?? "587");
+                var smtpFrom = config["Smtp:From"] ?? smtpUser;
+
+                using var smtp = new System.Net.Mail.SmtpClient(smtpHost, smtpPort)
+                {
+                    Credentials = new System.Net.NetworkCredential(smtpUser, smtpPass),
+                    EnableSsl = true
+                };
+                var body = $@"
+                <html><body style='font-family:Arial;color:#333;max-width:600px;margin:0 auto'>
+                    <div style='background:#0d6efd;color:white;padding:20px;text-align:center;border-radius:8px 8px 0 0'>
+                        <h2 style='margin:0'>Recuperacion de Contrasena</h2>
+                    </div>
+                    <div style='padding:30px;background:#f8f9fa;border:1px solid #dee2e6;border-top:none;border-radius:0 0 8px 8px'>
+                        <p>Su nueva contrasena temporal es:</p>
+                        <div style='background:white;border:2px solid #0d6efd;border-radius:8px;padding:15px;text-align:center;margin:20px 0'>
+                            <span style='font-size:24px;font-weight:bold;letter-spacing:3px;color:#0d6efd'>{pwd}</span>
+                        </div>
+                        <p><strong>Al ingresar, el sistema le pedira crear una nueva contrasena.</strong></p>
+                    </div>
+                </body></html>";
+
+                var mail = new System.Net.Mail.MailMessage(smtpFrom, email, "Recuperacion de contrasena", body)
+                { IsBodyHtml = true };
+                await smtp.SendMailAsync(mail);
+                return (true, "Se envio una contrasena temporal a su correo.");
+            }
+            catch (Exception ex)
+            {
+                return (true, $"Contrasena restablecida pero no se pudo enviar el correo: {ex.Message}");
+            }
+        }
+        catch (Exception ex) { return (false, ex.Message); }
+    }
+
+    /// <summary>Verifica si el email esta marcado para forzar cambio (por recuperacion).</summary>
+    public bool DebeForcarCambio(string email)
+    {
+        return _emailsDebeCambiar.Remove(email.ToLower());
+    }
+
+    private async Task<(bool ok, string msg)> CambiarContrasenaInterno(string email, string nueva)
+    {
+        var pkUsuario = await ObtenerPK("usuario");
+        var content = new StringContent(
+            JsonSerializer.Serialize(new Dictionary<string, string> { ["contrasena"] = nueva }),
+            System.Text.Encoding.UTF8, "application/json");
+        var resp = await _http.PutAsync(
+            $"/api/usuario/{pkUsuario}/{email}?camposEncriptar=contrasena", content);
+        if (resp.IsSuccessStatusCode) return (true, "OK");
+        return (false, "Error al actualizar contrasena.");
+    }
+
+    // ══════════════════════════════════════════════════════════
     // VERIFICAR ACCESO A RUTA
     // ══════════════════════════════════════════════════════════
 

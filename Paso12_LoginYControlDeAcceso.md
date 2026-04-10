@@ -159,31 +159,99 @@ Asi funciona con cualquier BD sin importar como se llamen las columnas.
 
 ## Configurar Gmail para SMTP (recuperacion de contrasena)
 
-NOTA: La recuperacion de contrasena por email aun no esta implementada en Blazor
-(esta pendiente). Pero cuando se agregue, necesitara SMTP.
+La recuperacion de contrasena genera una temporal, la guarda con BCrypt,
+y la envia por correo SMTP. Si SMTP no esta configurado, muestra la
+temporal en pantalla (para desarrollo).
 
-### Paso 1: Activar verificacion en 2 pasos
+### Paso 1: Crear una cuenta de Gmail (si no tiene una para el proyecto)
 
-1. Ir a https://myaccount.google.com/security
-2. Buscar "Verificacion en 2 pasos" -> Activarla
+1. Ir a https://accounts.google.com/signup
+2. Crear una cuenta nueva (ej: `mi.proyecto.2026@gmail.com`)
+3. Completar el registro con nombre, fecha de nacimiento, etc.
+4. Agregar un numero de telefono (lo va a necesitar en el paso 2)
 
-### Paso 2: Crear App Password
+### Paso 2: Activar la verificacion en 2 pasos
 
-1. Ir a https://myaccount.google.com/apppasswords
-2. Nombre: "BlazorLogin"
-3. Copiar la contrasena de 16 caracteres (ej: `abcdefghijklmnop`)
+Google NO permite crear App Passwords sin verificacion en 2 pasos.
+Es un requisito obligatorio. Siga estos pasos:
 
-### Paso 3: Configurar appsettings.json
+1. Abrir el navegador e ir a: https://myaccount.google.com/security
+2. Iniciar sesion con la cuenta de Gmail del paso 1
+3. Bajar en la pagina hasta la seccion **"Como inicias sesion en Google"**
+4. Buscar **"Verificacion en dos pasos"** (dira "desactivada")
+5. Hacer clic en **"Verificacion en dos pasos"**
+6. Se abre una pagina nueva. Hacer clic en el boton **"Activar verificacion en dos pasos"**
+7. Google le pedira confirmar con su telefono:
+   - Seleccionar el pais (+57 Colombia)
+   - Escribir su numero de celular
+   - Elegir "Mensaje de texto" o "Llamada"
+   - Hacer clic en "Enviar"
+8. Escribir el codigo de 6 digitos que le llego al celular
+9. Hacer clic en **"Activar"**
+10. Verificar que ahora dice **"Activada"** en la seccion de seguridad
+
+### Paso 3: Crear una App Password (contrasena de aplicacion)
+
+Una App Password es una contrasena especial de 16 caracteres que
+solo sirve para aplicaciones externas. La contrasena normal de Gmail
+NO funciona para SMTP.
+
+1. Ir a: https://myaccount.google.com/apppasswords
+   - Si no le deja entrar, es porque el paso 2 no se completo
+   - Vuelva al paso 2 y verifique que la verificacion en 2 pasos esta "Activada"
+2. En **"Nombre de la app"** escribir: `BlazorLogin` (o cualquier nombre)
+3. Hacer clic en **"Crear"**
+4. Google muestra una contrasena de 16 caracteres, algo como: `pcsa qfto hhjf sadv`
+5. **Copiarla inmediatamente** — solo se muestra UNA vez
+6. Si la pierde, puede crear otra (y la anterior deja de funcionar)
+
+### Paso 4: Configurar appsettings.json
+
+Abrir `appsettings.json` del proyecto y poner los datos:
 
 ```json
 {
-  "SmtpHost": "smtp.gmail.com",
-  "SmtpPort": 587,
-  "SmtpUser": "tucuenta@gmail.com",
-  "SmtpPass": "abcdefghijklmnop",
-  "SmtpFrom": "tucuenta@gmail.com"
+  "Smtp": {
+    "Host": "smtp.gmail.com",
+    "Port": 587,
+    "User": "mi.proyecto.2026@gmail.com",
+    "Pass": "pcsa qfto hhjf sadv",
+    "From": "mi.proyecto.2026@gmail.com"
+  }
 }
 ```
+
+- **User**: la cuenta de Gmail del paso 1
+- **Pass**: la App Password del paso 3 (NO la contrasena normal de Gmail)
+- **From**: misma cuenta (es el remitente del correo)
+
+### Paso 5: Probar
+
+1. Ejecutar la aplicacion Blazor
+2. Ir a `/recuperar-contrasena`
+3. Escribir un email que exista en la tabla `usuario`
+4. Si todo esta bien, llega un correo con la contrasena temporal
+5. Si SMTP no esta configurado, muestra la temporal en pantalla
+
+### Si algo no funciona
+
+| Problema | Solucion |
+|----------|----------|
+| "App passwords not available" | El paso 2 no se completo. Verificar que dice "Activada" |
+| "Username and Password not accepted" | Usar la App Password del paso 3, NO la contrasena de Gmail |
+| "SMTP no configurado" | Llenar User y Pass en appsettings.json |
+| "Connection refused" | Verificar que el firewall no bloquee el puerto 587 |
+| No llega el correo | Revisar la carpeta de **spam** del destinatario |
+| Perdio la App Password | Ir al paso 3 y crear una nueva |
+
+### Alternativas a Gmail
+
+| Proveedor | Host | Puerto | Notas |
+|-----------|------|--------|-------|
+| Gmail | smtp.gmail.com | 587 | Requiere App Password (pasos 2 y 3) |
+| Outlook/Hotmail | smtp-mail.outlook.com | 587 | Contrasena normal funciona |
+| Yahoo | smtp.mail.yahoo.com | 587 | Requiere App Password |
+| Mailtrap (pruebas) | sandbox.smtp.mailtrap.io | 587 | Gratis para desarrollo, no envia correos reales |
 
 ---
 

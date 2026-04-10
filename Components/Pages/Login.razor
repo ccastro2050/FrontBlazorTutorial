@@ -74,8 +74,12 @@
         cargando = false;
         if (ok)
         {
-            if (auth.DebeCambiarContrasena)
+            // Si recupero contrasena, forzar cambio
+            if (auth.DebeCambiarContrasena || auth.DebeForcarCambio(email))
+            {
+                auth.DebeCambiarContrasena = true;
                 nav.NavigateTo("/cambiar-contrasena", forceLoad: false);
+            }
             else
                 nav.NavigateTo("/", forceLoad: false);
         }

@@ -1,0 +1,85 @@
+@*
+    RecuperarContrasena.razor - Formulario para recuperar contrasena olvidada.
+
+    COMO FUNCIONA:
+    1. El usuario ingresa su email
+    2. El AuthService busca el usuario en la BD
+    3. Genera contrasena temporal aleatoria (ej: "Ak7xPm2q")
+    4. La guarda encriptada con BCrypt en la BD (la anterior se pierde)
+    5. Intenta enviarla por correo SMTP (si esta configurado en appsettings.json)
+    6. En el proximo login, el sistema FUERZA cambio de contrasena
+
+    NOTA DE SEGURIDAD:
+    - Esta pagina usa EmptyLayout (sin sidebar) porque el usuario no esta logueado
+    - Es la unica pagina (ademas de /login) accesible sin autenticacion
+
+    SMTP:
+    - Si SMTP no esta configurado, muestra la temporal en pantalla (para desarrollo)
+    - En produccion, configurar Smtp:User y Smtp:Pass en appsettings.json
+*@
+
+@page "/recuperar-contrasena"
+@layout FrontBlazorTutorial.Components.Layout.EmptyLayout
+@inject FrontBlazorTutorial.Services.AuthService auth
+@inject NavigationManager nav
+@inject IConfiguration config
+@rendermode InteractiveServer
+
+<div class="d-flex justify-content-center align-items-center" style="min-height:100vh;background:#f0f2f5">
+    <div class="card shadow" style="width:400px">
+        <div class="card-header text-center bg-info text-white">
+            <h5 class="mb-0">Recuperar Contrasena</h5>
+        </div>
+        <div class="card-body p-4">
+            @if (!string.IsNullOrEmpty(mensaje))
+            {
+                <div class='alert alert-@tipoMensaje small py-2'>@mensaje</div>
+            }
+
+            <p class="small text-muted">Ingrese su correo para recibir una contrasena temporal.</p>
+
+            <div class="mb-3">
+                <label class="form-label small">Correo electronico</label>
+                <input type="email" class="form-control" @bind="email" />
+            </div>
+            <button class="btn btn-info w-100 text-white" @onclick="Recuperar" disabled="@cargando">
+                @if (cargando)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                Enviar
+            </button>
+            <div class="text-center mt-3">
+                <a href="/login" class="small text-muted">Volver al login</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    string email = "", mensaje = "", tipoMensaje = "info";
+    bool cargando;
+
+    async Task Recuperar()
+    {
+        mensaje = "";
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            tipoMensaje = "danger";
+            mensaje = "Ingrese su correo electronico.";
+            return;
+        }
+
+        cargando = true;
+        // Llama al AuthService que:
+        // 1. Verifica que el email exista
+        // 2. Genera temporal aleatoria
+        // 3. La guarda con BCrypt
+        // 4. Intenta enviar por SMTP
+        var (ok, msg) = await auth.RecuperarContrasena(email, config);
+        cargando = false;
+
+        tipoMensaje = ok ? "success" : "danger";
+        mensaje = msg;
+    }
+}

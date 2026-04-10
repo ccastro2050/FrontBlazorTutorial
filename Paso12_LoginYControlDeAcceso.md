@@ -1,5 +1,11 @@
 # Paso 12: Login y Control de Acceso - Blazor Server
 
+## Los 3 conceptos clave de seguridad
+
+1. **Autenticacion** → ¿Quien eres? (login, BCrypt, JWT)
+2. **Autorizacion** → ¿Que puedes hacer? (roles, rutas, permisos)
+3. **Encriptacion** → ¿Como se protege? (BCrypt para contrasenas, Data Protection para sesion, HTTPS para transporte)
+
 ## Que se implemento
 
 - **Login** con email y contrasena encriptada (BCrypt)

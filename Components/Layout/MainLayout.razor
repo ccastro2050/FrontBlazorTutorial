@@ -1,23 +1,88 @@
-﻿@inherits LayoutComponentBase
+@*
+    MainLayout.razor - Layout principal (sidebar + barra superior + contenido).
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
+    COMO FUNCIONA LA AUTENTICACION AQUI:
+    =====================================
+    1. Al cargar cualquier pagina, OnAfterRenderAsync se ejecuta
+    2. Llama _auth.Restaurar() para recuperar la sesion del navegador
+    3. Si no hay sesion -> redirige a /login
+    4. Si debe cambiar contrasena -> redirige a /cambiar-contrasena
+    5. Muestra spinner mientras restaura (evita flash de contenido)
+    6. Barra superior muestra nombre del usuario + boton "Cerrar sesion"
+
+    QUE ES OnAfterRenderAsync:
+    ==========================
+    Es un metodo de ciclo de vida de Blazor que se ejecuta DESPUES de
+    renderizar el componente. Se usa porque ProtectedSessionStorage
+    solo esta disponible despues del primer render (necesita JavaScript).
+*@
+
+@inherits LayoutComponentBase
+@inject FrontBlazorTutorial.Services.AuthService _auth
+@inject NavigationManager _nav
+
+@if (_cargando)
+{
+    <div class="d-flex justify-content-center align-items-center" style="min-height:100vh">
+        <div class="spinner-border text-primary"></div>
     </div>
-
-    <main>
-        <div class="top-row px-4">
-            <span>Frontend Blazor — API GenericaCsharp</span>
+}
+else
+{
+    <div class="page">
+        <div class="sidebar">
+            <NavMenu />
         </div>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+        <main>
+            <div class="top-row px-4 d-flex justify-content-between align-items-center">
+                <span>Frontend Blazor — API GenericaCsharp</span>
+                @if (_auth.EstaAutenticado)
+                {
+                    <div class="d-flex align-items-center gap-3">
+                        <small class="text-muted">@(_auth.NombreUsuario ?? _auth.Usuario)</small>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="_Logout">Cerrar sesion</button>
+                    </div>
+                }
+                else
+                {
+                    <a href="/login" class="btn btn-sm btn-outline-primary">Iniciar sesion</a>
+                }
+            </div>
+
+            <article class="content px-4">
+                @Body
+            </article>
+        </main>
+    </div>
+}
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    private bool _cargando = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await _auth.Restaurar();
+            _cargando = false;
+            if (!_auth.EstaAutenticado && !_nav.Uri.Contains("/login"))
+                _nav.NavigateTo("/login");
+            if (_auth.DebeCambiarContrasena && !_nav.Uri.Contains("/cambiar-contrasena"))
+                _nav.NavigateTo("/cambiar-contrasena");
+            StateHasChanged();
+        }
+    }
+
+    private async Task _Logout()
+    {
+        await _auth.Logout();
+        _nav.NavigateTo("/login");
+    }
+}

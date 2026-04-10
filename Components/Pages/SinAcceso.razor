@@ -1,0 +1,28 @@
+@*
+    SinAcceso.razor - Pagina de error 403 (Acceso Denegado).
+
+    Aparece cuando el usuario intenta acceder a una ruta
+    no asignada a su rol. El MainLayout verifica con
+    _auth.TieneAcceso(ruta) y redirige aqui si no tiene permiso.
+
+    Para resolverlo: el admin debe asignar la ruta al rol del usuario
+    en las tablas ruta y rutarol.
+*@
+
+@page "/sin-acceso"
+@inject NavigationManager nav
+@rendermode InteractiveServer
+
+<div class="container d-flex justify-content-center align-items-center" style="min-height:70vh">
+    <div class="card shadow" style="width:450px">
+        <div class="card-header text-center bg-danger text-white">
+            <h5 class="mb-0">Acceso Denegado</h5>
+        </div>
+        <div class="card-body p-4 text-center">
+            <p class="fs-1 mb-2">&#x1F6AB;</p>
+            <p>No tiene permisos para acceder a esta pagina.</p>
+            <p class="text-muted small">Contacte al administrador si necesita acceso.</p>
+            <button class="btn btn-primary mt-2" @onclick='() => nav.NavigateTo("/")'>Volver al inicio</button>
+        </div>
+    </div>
+</div>

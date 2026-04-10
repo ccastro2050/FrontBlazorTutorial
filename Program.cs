@@ -1,4 +1,5 @@
 using FrontBlazorTutorial.Components;
+using FrontBlazorTutorial.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,7 @@ builder.Services.AddScoped(sp => new HttpClient
 // Registrar los servicios de la API
 builder.Services.AddScoped<FrontBlazorTutorial.Services.ApiService>();
 builder.Services.AddScoped<FrontBlazorTutorial.Services.SpService>();
+builder.Services.AddScoped<AuthService>();
 
 var app = builder.Build();
 

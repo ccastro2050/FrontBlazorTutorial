@@ -1,0 +1,89 @@
+@*
+    Login.razor - Pagina de inicio de sesion.
+
+    CONCEPTOS BLAZOR:
+    - @page "/login"          -> Define la URL de esta pagina
+    - @layout EmptyLayout     -> Usa un layout vacio (sin sidebar) porque el login no necesita menu
+    - @inject AuthService     -> Inyecta el servicio de autenticacion (Dependency Injection)
+    - @inject NavigationManager -> Para redirigir a otra pagina despues del login
+    - @rendermode InteractiveServer -> Necesario para que @onclick y @bind funcionen (SignalR)
+    - @bind="email"           -> Two-way binding: sincroniza la variable con el input
+    - @onclick="DoLogin"      -> Al hacer clic, ejecuta el metodo DoLogin()
+
+    FLUJO:
+    1. Usuario escribe email y contrasena
+    2. Clic en "Iniciar sesion" -> llama DoLogin()
+    3. DoLogin() llama auth.Login() que verifica con BCrypt en la API
+    4. Si OK -> redirige a "/" (inicio)
+    5. Si debe cambiar contrasena -> redirige a "/cambiar-contrasena"
+    6. Si falla -> muestra error en alerta roja
+*@
+
+@page "/login"
+@layout FrontBlazorTutorial.Components.Layout.EmptyLayout
+@inject FrontBlazorTutorial.Services.AuthService auth
+@inject NavigationManager nav
+@rendermode InteractiveServer
+
+<div class="d-flex justify-content-center align-items-center" style="min-height:100vh;background:#f0f2f5">
+    <div class="card shadow" style="width:400px">
+        <div class="card-header text-center" style="background:var(--bs-primary, #0d6efd);color:white">
+            <h4 class="mb-0">FrontBlazorTutorial</h4>
+        </div>
+        <div class="card-body p-4">
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <div class="alert alert-danger small py-2 alert-dismissible fade show">
+                    @error
+                    <button type="button" class="btn-close" @onclick='() => error = ""'></button>
+                </div>
+            }
+
+            <div class="mb-3">
+                <label class="form-label small">Correo electronico</label>
+                <input type="email" class="form-control" @bind="email" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label small">Contrasena</label>
+                <input type="password" class="form-control" @bind="contrasena"
+                       @onkeypress="OnKeyPress" />
+            </div>
+            <button class="btn btn-primary w-100" @onclick="DoLogin" disabled="@cargando">
+                @if (cargando)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                Iniciar sesion
+            </button>
+            <div class="text-center mt-3">
+                <a href="/recuperar-contrasena" class="small text-muted">Olvido su contrasena?</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    string email = "", contrasena = "", error = "";
+    bool cargando;
+
+    async Task DoLogin()
+    {
+        error = "";
+        cargando = true;
+        var (ok, msg) = await auth.Login(email, contrasena);
+        cargando = false;
+        if (ok)
+        {
+            if (auth.DebeCambiarContrasena)
+                nav.NavigateTo("/cambiar-contrasena", forceLoad: false);
+            else
+                nav.NavigateTo("/", forceLoad: false);
+        }
+        else error = msg;
+    }
+
+    async Task OnKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await DoLogin();
+    }
+}

@@ -1,0 +1,73 @@
+@*
+    CambiarContrasena.razor - Formulario para cambiar contrasena.
+
+    SE MUESTRA CUANDO:
+    1. El usuario hace clic voluntariamente
+    2. El sistema lo FUERZA despues de usar contrasena temporal (recuperacion)
+
+    VALIDACION:
+    - Minimo 6 caracteres, 1 mayuscula, 1 numero
+    - La API encripta con BCrypt via ?camposEncriptar=contrasena
+*@
+
+@page "/cambiar-contrasena"
+@inject FrontBlazorTutorial.Services.AuthService auth
+@inject NavigationManager nav
+@rendermode InteractiveServer
+
+<div class="container" style="max-width:450px; margin-top:80px">
+    <div class="card shadow">
+        <div class="card-header text-center bg-warning text-dark">
+            <h5 class="mb-0">Cambiar Contrasena</h5>
+        </div>
+        <div class="card-body p-4">
+            @if (!string.IsNullOrEmpty(mensaje))
+            {
+                <div class='alert alert-@tipoMensaje small py-2'>@mensaje</div>
+            }
+
+            <div class="mb-3">
+                <label class="form-label small">Nueva contrasena</label>
+                <input type="password" class="form-control" @bind="nueva" />
+                <small class="text-muted">Minimo 6 caracteres, 1 mayuscula, 1 numero</small>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small">Confirmar contrasena</label>
+                <input type="password" class="form-control" @bind="confirmar" />
+            </div>
+            <button class="btn btn-warning w-100" @onclick="Cambiar" disabled="@cargando">
+                @if (cargando)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                Cambiar
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    string nueva = "", confirmar = "", mensaje = "", tipoMensaje = "danger";
+    bool cargando;
+
+    async Task Cambiar()
+    {
+        mensaje = "";
+        if (nueva != confirmar) { mensaje = "Las contrasenas no coinciden."; return; }
+        if (nueva.Length < 6) { mensaje = "Minimo 6 caracteres."; return; }
+        if (!nueva.Any(char.IsUpper)) { mensaje = "Debe incluir al menos una mayuscula."; return; }
+        if (!nueva.Any(char.IsDigit)) { mensaje = "Debe incluir al menos un numero."; return; }
+
+        cargando = true;
+        var (ok, msg) = await auth.CambiarContrasena(nueva);
+        cargando = false;
+        if (ok)
+        {
+            tipoMensaje = "success";
+            mensaje = "Contrasena actualizada.";
+            await Task.Delay(1500);
+            nav.NavigateTo("/", forceLoad: false);
+        }
+        else { tipoMensaje = "danger"; mensaje = msg; }
+    }
+}

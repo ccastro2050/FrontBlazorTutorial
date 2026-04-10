@@ -16,24 +16,37 @@
 
 ---
 
-## Archivos creados
+## Que se crea, que se modifica, que se agrega
 
-```
-FrontBlazorTutorial/
-├── Services/
-│   └── AuthService.cs                 <- Logica de auth, roles, rutas, descubrimiento dinamico
-├── Components/
-│   ├── Pages/
-│   │   ├── Login.razor                <- Formulario de login
-│   │   ├── CambiarContrasena.razor    <- Cambio de contrasena
-│   │   └── SinAcceso.razor            <- Pagina error 403
-│   └── Layout/
-│       ├── MainLayout.razor           <- Modificado: auth check + boton logout
-│       └── EmptyLayout.razor          <- Layout vacio para login (sin sidebar)
-├── Components/
-│   └── App.razor                      <- Modificado: @rendermode InteractiveServer
-└── Program.cs                         <- Modificado: registra AuthService
-```
+### Archivos que se CREAN (nuevos)
+
+| Archivo | Para que |
+|---------|---------|
+| `Services/AuthService.cs` | Toda la logica: login, roles, rutas, cambiar contrasena, descubrimiento dinamico |
+| `Components/Pages/Login.razor` | Formulario de login (email + contrasena) |
+| `Components/Pages/CambiarContrasena.razor` | Formulario para cambiar contrasena |
+| `Components/Pages/RecuperarContrasena.razor` | Recuperar contrasena olvidada (envia email SMTP) |
+| `Components/Pages/SinAcceso.razor` | Pagina error 403 (no tiene permiso para esa ruta) |
+| `Components/Layout/EmptyLayout.razor` | Layout vacio para login (sin sidebar ni menu) |
+
+### Archivos que se MODIFICAN (ya existian)
+
+| Archivo | Que se agrega | Para que |
+|---------|---------------|---------|
+| `Program.cs` | `builder.Services.AddScoped<AuthService>();` | Registrar el servicio en Blazor (Dependency Injection) |
+| `Components/App.razor` | `@rendermode="InteractiveServer"` en `<Routes>` | Hacer el layout interactivo (necesario para ProtectedSessionStorage) |
+| `Components/Layout/MainLayout.razor` | `@inject AuthService`, `OnAfterRenderAsync`, boton logout | Verificar sesion al cargar, redirigir a /login, mostrar usuario y boton cerrar sesion |
+| `appsettings.json` | Seccion `"Smtp"` con Host, Port, User, Pass, From | Configurar correo Gmail para recuperar contrasena |
+
+### Tablas que se necesitan en la BD (5)
+
+| Tabla | Para que |
+|-------|---------|
+| `usuario` | Almacenar credenciales (email + contrasena BCrypt) |
+| `rol` | Definir tipos de usuario (Administrador, Vendedor, etc) |
+| `rol_usuario` | Asignar roles a usuarios (un usuario puede tener varios roles) |
+| `ruta` | Registrar las paginas del sistema (/producto, /cliente, etc) |
+| `rutarol` | Definir que paginas puede acceder cada rol |
 
 ---
 

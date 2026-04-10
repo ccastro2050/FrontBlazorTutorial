@@ -1,38 +1,95 @@
 /*
- * AuthService.cs - Servicio de autenticacion para Blazor Server.
+ * AuthService.cs - Servicio de autenticacion y autorizacion para Blazor Server.
  *
- * COMO FUNCIONA LA AUTENTICACION:
- * ================================
- * 1. El usuario escribe email + contrasena en Login.razor
- * 2. Este servicio envia los datos a la API generica C# (POST /api/autenticacion/token)
- * 3. La API verifica la contrasena con BCrypt (hash irreversible en la BD)
- * 4. Si es correcta, devuelve un token JWT
- * 5. Se consultan los ROLES del usuario y las RUTAS que puede acceder
- * 6. Todo se guarda en ProtectedSessionStorage (cookie encriptada del navegador)
+ * QUE SE NECESITA PARA LOGIN Y CONTROL DE ACCESO:
+ * =================================================
+ *
+ * ARCHIVOS QUE SE CREAN (nuevos):
+ *   Services/AuthService.cs              <- ESTE ARCHIVO: toda la logica de auth
+ *   Components/Pages/Login.razor         <- Formulario de login (email + contrasena)
+ *   Components/Pages/CambiarContrasena.razor <- Formulario para cambiar contrasena
+ *   Components/Pages/RecuperarContrasena.razor <- Recuperar contrasena por email SMTP
+ *   Components/Pages/SinAcceso.razor     <- Pagina error 403 (no tiene permiso)
+ *   Components/Layout/EmptyLayout.razor  <- Layout vacio para login (sin sidebar)
+ *
+ * ARCHIVOS QUE SE MODIFICAN (existentes):
+ *   Program.cs                           <- Agregar: builder.Services.AddScoped<AuthService>();
+ *   Components/App.razor                 <- Agregar: @rendermode="InteractiveServer" en <Routes>
+ *   Components/Layout/MainLayout.razor   <- Agregar: @inject AuthService, OnAfterRenderAsync
+ *                                           (verifica sesion, redirige a /login, boton logout)
+ *   appsettings.json                     <- Agregar: seccion "Smtp" para recuperar contrasena
+ *
+ * TABLAS QUE SE NECESITAN EN LA BD (5):
+ *   usuario      <- email (PK) + contrasena (BCrypt)
+ *   rol          <- id + nombre (Administrador, Vendedor, etc)
+ *   rol_usuario  <- vincula usuario con roles (N:M)
+ *   ruta         <- id + ruta (/producto, /cliente, etc)
+ *   rutarol      <- vincula roles con rutas (N:M)
+ *
+ * LOS 3 CONCEPTOS CLAVE DE SEGURIDAD:
+ * =====================================
+ * 1. AUTENTICACION = ¿Quien eres?
+ *    -> Login con email + contrasena
+ *    -> La API verifica con BCrypt (hash irreversible)
+ *    -> Si es correcto, devuelve un token JWT
+ *    PARA QUE: confirmar que el usuario es quien dice ser
+ *
+ * 2. AUTORIZACION = ¿Que puedes hacer?
+ *    -> Se cargan los ROLES del usuario (ej: "Vendedor", "Admin")
+ *    -> Se cargan las RUTAS que esos roles pueden acceder (ej: "/producto", "/cliente")
+ *    -> MainLayout verifica con TieneAcceso() antes de mostrar cada pagina
+ *    PARA QUE: controlar que paginas puede ver cada usuario segun su rol
+ *
+ * 3. ENCRIPTACION = ¿Como se protege?
+ *    -> Contrasenas: BCrypt (hash irreversible en la BD, nadie puede leerlas)
+ *    -> Sesion: ProtectedSessionStorage (encriptado en el navegador, no manipulable)
+ *    -> Transporte: HTTPS (los datos viajan encriptados por la red)
+ *    PARA QUE: proteger la informacion en reposo (BD), en el navegador y en transito
+ *
+ * PROCESO COMPLETO PASO A PASO:
+ * ==============================
+ * 1. Usuario abre la app -> MainLayout llama Restaurar() -> no hay sesion -> redirige a /login
+ * 2. Usuario escribe email + contrasena en Login.razor
+ * 3. Login.razor llama AuthService.Login() que hace:
+ *    a. PrecargarEstructura(): GET /api/estructuras/basedatos
+ *       PARA QUE: descubrir como se llaman las columnas PK y FK de cada tabla
+ *       (asi funciona con cualquier BD sin hardcodear nombres de columnas)
+ *    b. PostJson("autenticacion/token"): POST con email + contrasena
+ *       PARA QUE: la API verifica la contrasena con BCrypt y retorna OK o error
+ *    c. CargarDatosUsuario(): GET /api/usuario -> busca el nombre del usuario
+ *       PARA QUE: mostrar "Bienvenido, Juan" en vez de "Bienvenido, juan@mail.com"
+ *    d. CargarRoles(): GET /api/rol_usuario + GET /api/rol
+ *       PARA QUE: saber que roles tiene (Administrador? Vendedor? ambos?)
+ *    e. CargarRutasPermitidas(): GET /api/rutarol + GET /api/rol + GET /api/ruta
+ *       PARA QUE: saber a que paginas puede acceder segun sus roles
+ *    f. Guardar en ProtectedSessionStorage
+ *       PARA QUE: recordar la sesion si el usuario refresca (F5)
+ * 4. Redirige a "/" (inicio)
+ * 5. En cada pagina, MainLayout verifica _auth.TieneAcceso(ruta)
+ *    PARA QUE: si el usuario intenta acceder a una ruta no permitida -> /sin-acceso (403)
  *
  * TABLAS INVOLUCRADAS:
  * ====================
  * - usuario:     email (PK), contrasena (hash BCrypt)
+ *                PARA QUE: almacenar credenciales de acceso
  * - rol:         id (PK), nombre (ej: "Administrador", "Vendedor")
- * - rol_usuario: vincula usuario con roles (fkemail -> usuario, fkidrol -> rol)
+ *                PARA QUE: definir tipos de usuario del sistema
+ * - rol_usuario: fkemail -> usuario, fkidrol -> rol
+ *                PARA QUE: asignar roles a usuarios (un usuario puede tener varios roles)
  * - ruta:        id (PK), ruta (ej: "/producto", "/cliente")
- * - rutarol:     vincula roles con rutas (fkidrol -> rol, fkidruta -> ruta)
+ *                PARA QUE: registrar las paginas del sistema
+ * - rutarol:     fkidrol -> rol, fkidruta -> ruta
+ *                PARA QUE: definir que paginas puede acceder cada rol
  *
  * DIAGRAMA:
  *   usuario --< rol_usuario >-- rol --< rutarol >-- ruta
+ *   (quien)    (tiene roles)   (que rol)  (puede ver)  (que pagina)
  *
- * DESCUBRIMIENTO DINAMICO:
- * ========================
- * Este servicio NO hardcodea nombres de columnas (fkemail, fkidrol, etc).
- * Los descubre consultando GET /api/estructuras/basedatos que retorna
- * la estructura completa de la BD (columnas, PKs, FKs).
- * Asi funciona con cualquier BD (Postgres, SqlServer, MySQL).
- *
- * OPTIMIZACION:
- * =============
- * - Una sola llamada a /api/estructuras/basedatos cachea TODAS las tablas
- * - Las llamadas de datos se hacen en paralelo (Task.WhenAll)
- * - La sesion se guarda en ProtectedSessionStorage (persiste al refrescar F5)
+ * OPTIMIZACIONES:
+ * ===============
+ * - PrecargarEstructura(): UNA sola llamada cachea TODAS las tablas (no una por una)
+ * - Task.WhenAll: las llamadas HTTP se hacen en paralelo (mas rapido)
+ * - _cache: los resultados de estructura se guardan para no repetir consultas
  */
 
 using System.Globalization;
@@ -73,52 +130,97 @@ public class AuthService
     // ══════════════════════════════════════════════════════════
     // HELPERS HTTP: Metodos internos para llamar a la API
     // ══════════════════════════════════════════════════════════
+    //
+    // ¿Por que no usar ApiService?
+    // Porque ApiService puede tener firmas diferentes segun el proyecto
+    // (Listar vs ListarAsync, parametros distintos, etc).
+    // Estos helpers usan HttpClient directo para ser 100% independientes.
+    // Asi el AuthService funciona en CUALQUIER proyecto Blazor sin importar
+    // como este implementado su ApiService.
+    //
+    // Son solo 2 metodos:
+    //   - Listar(): GET /api/{tabla} -> trae registros
+    //   - PostJson(): POST /api/{endpoint} -> envia datos (para autenticar)
+    // ══════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Trae todos los registros de una tabla.
+    /// Trae todos los registros de una tabla desde la API.
     /// Equivale a: GET /api/{tabla}?limite=999999
-    /// Retorna lista de diccionarios: [{"email":"juan@...", "nombre":"Juan"}, ...]
+    ///
+    /// La API retorna: {"datos": [{"email":"juan@...", "contrasena":"$2a$..."}, ...]}
+    /// Este metodo extrae el array "datos" y lo convierte a una lista de diccionarios.
+    ///
+    /// Se usa para: buscar usuario por email, traer roles, traer rutas, etc.
     /// </summary>
     private async Task<List<Dictionary<string, object?>>> Listar(string tabla, int limite = 999999)
     {
         try
         {
+            // Llamar a la API: GET /api/usuario?limite=999999 (por ejemplo)
             var json = await _http.GetStringAsync($"/api/{tabla}?limite={limite}");
+
+            // Parsear el JSON de respuesta
+            // La API retorna: {"datos": [{...}, {...}], "total": 5}
             using var doc = JsonDocument.Parse(json);
+
             var result = new List<Dictionary<string, object?>>();
+
+            // Extraer el array "datos" del JSON
             if (doc.RootElement.TryGetProperty("datos", out var datos))
+                // Recorrer cada registro del array
                 foreach (var item in datos.EnumerateArray())
                 {
+                    // Convertir cada registro JSON a un diccionario C#
+                    // Ejemplo: {"email": "juan@mail.com", "contrasena": "$2a$12$..."}
+                    //       -> dict["email"] = "juan@mail.com", dict["contrasena"] = "$2a$12$..."
                     var dict = new Dictionary<string, object?>();
                     foreach (var prop in item.EnumerateObject())
+                        // Si el valor es null en JSON, guardarlo como null en C#
                         dict[prop.Name] = prop.Value.ValueKind == JsonValueKind.Null
                             ? null : prop.Value.ToString();
                     result.Add(dict);
                 }
             return result;
         }
+        // Si la API no esta corriendo o hay error de red, retornar lista vacia
         catch { return new(); }
     }
 
     /// <summary>
     /// Envia un POST con JSON a la API.
     /// Se usa para autenticacion: POST /api/autenticacion/token
+    ///
+    /// Envia un diccionario como JSON y la API responde con:
+    ///   - 200 OK: credenciales correctas -> retorna (true, "OK")
+    ///   - 401: credenciales incorrectas -> retorna (false, "mensaje de error")
+    ///
+    /// No se usa para CRUD (crear registros) — solo para autenticar.
     /// </summary>
     private async Task<(bool ok, string msg)> PostJson(string endpoint, object datos)
     {
         try
         {
+            // Convertir el objeto C# a JSON string
+            // Ejemplo: {"tabla":"usuario","campoUsuario":"email",...}
             var content = new StringContent(
                 JsonSerializer.Serialize(datos),
                 System.Text.Encoding.UTF8, "application/json");
+
+            // Enviar POST a la API: POST /api/autenticacion/token
             var resp = await _http.PostAsync($"/api/{endpoint}", content);
+
+            // Si la API respondio 200 OK -> credenciales correctas
             if (resp.IsSuccessStatusCode) return (true, "OK");
+
+            // Si respondio error (401, 500, etc) -> extraer el mensaje de error
+            // La API retorna: {"estado": 401, "mensaje": "Contrasena incorrecta."}
             var body = await resp.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(body);
             var msg = doc.RootElement.TryGetProperty("mensaje", out var m)
                 ? m.GetString() ?? "Error" : "Error";
             return (false, msg);
         }
+        // Si la API no esta corriendo o hay error de red
         catch (Exception ex) { return (false, ex.Message); }
     }
 
@@ -269,37 +371,51 @@ public class AuthService
     {
         try
         {
-            // Paso 1: Precargar estructura + autenticar EN PARALELO
+            // ── PASO 1: AUTENTICACION (¿Quien eres?) ──
+            // Dos cosas en paralelo para ahorrar tiempo:
+            //   a) Precargar estructura de la BD (descubrir PKs y FKs)
+            //   b) Enviar credenciales a la API para verificar con BCrypt
             var pkTask = PrecargarEstructura();
             var authTask = PostJson("autenticacion/token", new Dictionary<string, object?>
             {
-                ["tabla"] = "usuario",
-                ["campoUsuario"] = "email",
-                ["campoContrasena"] = "contrasena",
-                ["usuario"] = email,
-                ["contrasena"] = contrasena
+                ["tabla"] = "usuario",           // En que tabla buscar
+                ["campoUsuario"] = "email",      // Que columna es el login
+                ["campoContrasena"] = "contrasena", // Que columna es la contrasena
+                ["usuario"] = email,             // El email ingresado por el usuario
+                ["contrasena"] = contrasena       // La contrasena ingresada (texto plano)
+                // La API compara esta contrasena contra el hash BCrypt de la BD
             });
+            // Task.WhenAll ejecuta ambas tareas AL MISMO TIEMPO (no una despues de otra)
             await Task.WhenAll(pkTask, authTask);
 
+            // Verificar si la autenticacion fue exitosa
             var (ok, msg) = authTask.Result;
             if (!ok) return (false, "Credenciales incorrectas");
 
+            // Si llego aqui, el usuario ES quien dice ser (autenticacion exitosa)
             Usuario = email;
 
-            // Paso 2: Cargar datos del usuario + roles EN PARALELO
-            var datosTask = CargarDatosUsuario(email);
-            var rolesTask = CargarRoles(email);
+            // ── PASO 2: AUTORIZACION (¿Que puedes hacer?) ──
+            // Cargar datos del usuario (nombre) + sus roles EN PARALELO
+            var datosTask = CargarDatosUsuario(email);  // Busca nombre, debe_cambiar_contrasena
+            var rolesTask = CargarRoles(email);          // Busca roles: Admin, Vendedor, etc.
             await Task.WhenAll(datosTask, rolesTask);
+
+            // Si no tiene roles, no puede entrar (no sabemos que puede hacer)
             if (Roles.Count == 0) return (false, "El usuario no tiene roles asignados.");
 
-            // Paso 3: Cargar rutas permitidas (necesita Roles ya cargados)
+            // Cargar rutas permitidas (depende de Roles, por eso va despues)
+            // Busca: que paginas puede acceder segun sus roles
             await CargarRutasPermitidas();
 
-            // Paso 4: Guardar en ProtectedSessionStorage
-            // ProtectedSessionStorage encripta los datos en el navegador.
-            // Persiste mientras el tab este abierto (se pierde al cerrar el tab).
+            // ── PASO 3: ENCRIPTACION (guardar sesion protegida) ──
+            // Guardar en ProtectedSessionStorage del navegador.
+            // Los datos se encriptan automaticamente (el usuario no puede manipularlos).
+            // Persisten mientras el tab este abierto (F5 no los borra, cerrar tab si).
             await _session.SetAsync("usuario", Usuario);
             await _session.SetAsync("nombre_usuario", NombreUsuario ?? email);
+            // Los roles y rutas se guardan como texto separado por comas
+            // Ejemplo: "Administrador,Vendedor" y "/producto,/cliente,/factura"
             await _session.SetAsync("roles", string.Join(",", Roles));
             await _session.SetAsync("rutas_permitidas", string.Join(",", RutasPermitidas));
 
@@ -318,20 +434,29 @@ public class AuthService
     {
         try
         {
+            // Descubrir la PK de la tabla usuario (ej: "email")
             var pkUsuario = await ObtenerPK("usuario");
+
+            // Traer todos los usuarios de la BD
             var usuarios = await Listar("usuario");
+
+            // Buscar el usuario que coincida con el email del login
             foreach (var u in usuarios)
             {
                 var val = u.GetValueOrDefault(pkUsuario)?.ToString() ?? "";
+                // Comparar sin importar mayusculas/minusculas
                 if (val.Equals(email, StringComparison.OrdinalIgnoreCase))
                 {
+                    // Guardar el nombre para mostrar en la barra superior
                     NombreUsuario = u.GetValueOrDefault("nombre")?.ToString() ?? email;
+                    // Verificar si debe cambiar contrasena (campo booleano en BD)
                     var debeCambiar = u.GetValueOrDefault("debe_cambiar_contrasena")?.ToString();
                     DebeCambiarContrasena = debeCambiar == "True" || debeCambiar == "true" || debeCambiar == "1";
                     break;
                 }
             }
         }
+        // Si falla, usar el email como nombre (mejor que nada)
         catch { NombreUsuario = email; }
     }
 

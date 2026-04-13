@@ -105,63 +105,111 @@ CREATE TABLE rutarol (
 ## Flujo de autenticacion (paso a paso con diagrama)
 
 ```
-Usuario abre http://localhost:5003
+1. El usuario ABRE http://localhost:5003 en el navegador.
          |
          v
-MainLayout.razor (OnAfterRenderAsync)
+2. Blazor CARGA MainLayout.razor y EJECUTA OnAfterRenderAsync().
          |
-         +-- _auth.Restaurar() -> intenta leer sesion del navegador
+         +-- LLAMA _auth.Restaurar() para INTENTAR LEER la sesion del navegador.
          |     |
-         |     +-- ProtectedSessionStorage.GetAsync("usuario")
+         |     +-- CONSULTA ProtectedSessionStorage.GetAsync("usuario")
          |           |
-         |           +-- SI hay sesion -> mostrar pagina + nombre + boton logout
+         |           +-- SI ENCUENTRA sesion guardada:
+         |           |     RESTAURA usuario, roles, rutas_permitidas, token.
+         |           |     MUESTRA la pagina con el nombre del usuario y boton logout.
          |           |
-         |           +-- NO hay sesion -> nav.NavigateTo("/login")
+         |           +-- NO ENCUENTRA sesion (primera vez o cerro el tab):
+         |                 REDIRIGE a /login automaticamente.
          |
          v
-Login.razor
+3. Blazor MUESTRA Login.razor (formulario de login).
          |
-         +-- Usuario escribe email + contrasena
+         +-- El usuario ESCRIBE su email y contrasena.
          |
-         +-- Click "Iniciar sesion" -> DoLogin()
+         +-- HACE CLIC en "Iniciar sesion" -> se EJECUTA DoLogin().
          |     |
          |     v
-         |   AuthService.Login(email, contrasena)
+         |   SE LLAMA AuthService.Login(email, contrasena):
          |     |
-         |     +-- PASO 1: PrecargarEstructura() + PostJson("autenticacion/token")
-         |     |     |                                    |
-         |     |     |                                    v
-         |     |     |                  API C#: POST /api/autenticacion/token
-         |     |     |                                    |
-         |     |     |                  BCrypt.Verify(contrasena, hashBD)
-         |     |     |                                    |
-         |     |     |                  <- OK (token JWT) o ERROR (401)
+         |     +-- PASO 1 (en paralelo):
          |     |     |
-         |     |     +-- Cachea PKs y FKs de TODAS las tablas en UNA llamada
-         |     |
-         |     +-- PASO 2: CargarDatosUsuario() + CargarRoles()  <- EN PARALELO
-         |     |     |                              |
-         |     |     |                              +-- ObtenerFK("rol_usuario","usuario") -> "fkemail"
-         |     |     |                              +-- ObtenerFK("rol_usuario","rol") -> "fkidrol"
-         |     |     |                              +-- GET /api/rol_usuario + GET /api/rol
-         |     |     |                              +-- Filtrar: roles de este email
+         |     |     +-- DESCARGA la estructura de TODA la BD en una sola llamada.
+         |     |     |   CACHEA los nombres de PKs y FKs para no repetir consultas.
          |     |     |
-         |     |     +-- GET /api/usuario -> buscar nombre del usuario
+         |     |     +-- ENVIA las credenciales a la API C#:
+         |     |           POST /api/autenticacion/token
+         |     |           La API BUSCA el usuario en la BD.
+         |     |           La API COMPARA la contrasena con BCrypt (hash irreversible).
+         |     |           Si COINCIDE -> GENERA un token JWT y lo DEVUELVE.
+         |     |           Si NO coincide -> RECHAZA con error 401.
          |     |
-         |     +-- PASO 3: CargarRutasPermitidas()
+         |     +-- PASO 2 (en paralelo):
          |     |     |
-         |     |     +-- GET /api/rutarol + GET /api/rol + GET /api/ruta  <- 3 EN PARALELO
-         |     |     +-- Filtrar: rutas asignadas a los roles del usuario
+         |     |     +-- CONSULTA la tabla rol_usuario y rol.
+         |     |     |   DESCUBRE que columna es FK hacia usuario (ej: "fkemail").
+         |     |     |   FILTRA los roles que pertenecen a este email.
+         |     |     |   OBTIENE los nombres: ["Administrador", "Profesor", ...].
+         |     |     |
+         |     |     +-- CONSULTA la tabla usuario.
+         |     |         BUSCA el nombre del usuario para mostrar en la barra.
          |     |
-         |     +-- PASO 4: Guardar en ProtectedSessionStorage
+         |     +-- PASO 3:
+         |     |     |
+         |     |     +-- CONSULTA rutarol, rol y ruta (3 consultas en paralelo).
+         |     |     |   CRUZA los roles del usuario con las rutas asignadas.
+         |     |     +-- OBTIENE las rutas permitidas: ["/facultad", "/asignatura", ...].
+         |     |
+         |     +-- PASO 4:
          |           |
-         |           +-- session.SetAsync("usuario", "ccastro@correo.itm.edu.co")
-         |           +-- session.SetAsync("roles", "Administrador,Profesor,...")
-         |           +-- session.SetAsync("rutas_permitidas", "/facultad,/asignatura,...")
+         |           +-- GUARDA en ProtectedSessionStorage (encriptado en el navegador):
+         |                 "usuario" = "ccastro@correo.itm.edu.co"
+         |                 "token" = "eyJhbGciOiJIUzI1NiIs..."  (JWT para la API)
+         |                 "roles" = "Administrador,Profesor,..."
+         |                 "rutas_permitidas" = "/facultad,/asignatura,..."
          |
          v
-nav.NavigateTo("/") -> vuelve a MainLayout -> _auth.Restaurar() -> AHORA SI hay sesion
+4. REDIRIGE a / (pagina de inicio).
+   MainLayout SE EJECUTA de nuevo.
+   _auth.Restaurar() ENCUENTRA la sesion guardada.
+   MUESTRA la pagina con el sidebar, el nombre del usuario y el boton logout.
+   A partir de ahora, cada peticion a la API ENVIA el token JWT en el header.
 ```
+
+### Lectura del flujo (narrativa)
+
+> Cuando el usuario abre la aplicacion en el navegador, Blazor carga el layout
+> principal y lo primero que hace es intentar restaurar la sesion del navegador.
+> Si encuentra una sesion guardada (porque el usuario ya habia hecho login antes
+> y no cerro el tab), restaura sus datos y muestra la pagina normalmente.
+>
+> Si no encuentra sesion, redirige automaticamente a la pagina de login.
+> El usuario escribe su email y contrasena y hace clic en "Iniciar sesion".
+>
+> En ese momento, el sistema hace dos cosas al mismo tiempo para ser mas rapido:
+> descarga la estructura completa de la base de datos (para saber como se llaman
+> las columnas sin hardcodearlas) y envia las credenciales a la API.
+>
+> La API recibe el email y la contrasena en texto plano, busca al usuario en la
+> base de datos, y compara la contrasena con el hash BCrypt guardado. Si coincide,
+> genera un token JWT (una credencial temporal con expiracion) y lo devuelve.
+> Si no coincide, rechaza con un error.
+>
+> Con el login exitoso, el sistema carga en paralelo los datos del usuario
+> (su nombre para mostrar en la barra) y sus roles (Administrador, Profesor, etc).
+> Luego, con los roles ya cargados, consulta que paginas puede acceder cada rol
+> y arma la lista de rutas permitidas.
+>
+> Toda esta informacion (usuario, token, roles, rutas) se guarda encriptada en
+> el Session Storage del navegador. Encriptada porque Blazor usa ProtectedSessionStorage,
+> que cifra los valores con Data Protection API antes de guardarlos. Asi, aunque
+> alguien abra F12 y mire el Session Storage, solo ve caracteres sin sentido.
+>
+> Finalmente, redirige a la pagina de inicio. A partir de ese momento, cada vez
+> que el usuario navega a una pagina, el layout verifica si tiene permiso
+> consultando la lista de rutas permitidas. Y cada vez que se hace una peticion
+> a la API (listar, crear, actualizar, eliminar), el token JWT se envia
+> automaticamente en el header Authorization para que la API sepa quien esta
+> operando y no rechace la peticion.
 
 ## Como funciona la proteccion de rutas
 

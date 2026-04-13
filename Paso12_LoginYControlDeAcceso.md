@@ -9,10 +9,13 @@
 ## Que se implemento
 
 - **Login** con email y contrasena encriptada (BCrypt)
+- **JWT** (JSON Web Token): token enviado en cada request para proteger la API
 - **Control de acceso por roles**: cada usuario tiene roles, cada rol tiene rutas
-- **Cambio de contrasena** con validacion de seguridad
-- **Sesion persistente** con ProtectedSessionStorage (sobrevive F5)
+- **Cambio de contrasena** con validacion de seguridad (minimo 6 chars, mayuscula, numero)
+- **Recuperar contrasena** con envio de temporal por correo SMTP (Gmail)
+- **Sesion persistente** con ProtectedSessionStorage (encriptada, sobrevive F5)
 - **Descubrimiento dinamico** de PKs y FKs (compatible Postgres + SqlServer)
+- **3 capas de seguridad**: BCrypt (BD) + JWT (API) + Sesion (frontend)
 
 ---
 

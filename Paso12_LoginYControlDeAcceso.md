@@ -251,10 +251,35 @@ Es un string largo con 3 partes separadas por puntos: Header.Payload.Signature
 eyJhbGciOiJIUzI1NiIs...   <-- se ve asi en Session Storage como "token"
 ```
 
-### Para que sirve?
+### Que es un header HTTP?
+
+Cada peticion HTTP (GET, POST, PUT, DELETE) tiene dos partes:
+- **Headers**: informacion SOBRE la peticion (quien la hace, que formato, credenciales)
+- **Body**: los datos que se envian (ej: el JSON con los campos a crear)
+
+Es como enviar una carta:
+- El **header** es el sobre (remitente, destinatario, tipo de envio)
+- El **body** es la carta adentro (el contenido)
+
+El header `Authorization` es donde se pone el token JWT:
+
+```
+Ejemplo de una peticion HTTP completa:
+
+GET /api/producto HTTP/1.1          <-- metodo + ruta
+Host: localhost:5035                <-- header: a donde va
+Content-Type: application/json      <-- header: formato de datos
+Authorization: Bearer eyJhbG...     <-- header: credencial JWT
+
+(body vacio en GET, con datos en POST/PUT)
+```
+
+Se puede ver en F12 -> Network -> clic en una peticion -> Headers.
+
+### Para que sirve el JWT?
 
 Si la API tiene `[Authorize]` en un controller, SOLO acepta peticiones
-que traigan el token en el header HTTP:
+que traigan el token en el header Authorization:
 
 ```
 GET /api/producto HTTP/1.1

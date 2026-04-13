@@ -46,8 +46,8 @@
  *    -> Transporte: HTTPS (los datos viajan encriptados por la red)
  *    PARA QUE: proteger la informacion en reposo (BD), en el navegador y en transito
  *
- * PROCESO COMPLETO PASO A PASO:
- * ==============================
+ * PROCESO COMPLETO PASO A PASO (VERSION ACTUAL — ConsultasController):
+ * =====================================================================
  * 1. Usuario abre la app -> MainLayout llama Restaurar() -> no hay sesion -> redirige a /login
  * 2. Usuario escribe email + contrasena en Login.razor
  * 3. Login.razor llama AuthService.Login() que hace:
@@ -56,17 +56,52 @@
  *       (asi funciona con cualquier BD sin hardcodear nombres de columnas)
  *    b. PostJson("autenticacion/token"): POST con email + contrasena
  *       PARA QUE: la API verifica la contrasena con BCrypt y retorna OK o error
- *    c. CargarDatosUsuario(): GET /api/usuario -> busca el nombre del usuario
- *       PARA QUE: mostrar "Bienvenido, Juan" en vez de "Bienvenido, juan@mail.com"
- *    d. CargarRoles(): GET /api/rol_usuario + GET /api/rol
- *       PARA QUE: saber que roles tiene (Administrador? Vendedor? ambos?)
- *    e. CargarRutasPermitidas(): GET /api/rutarol + GET /api/rol + GET /api/ruta
- *       PARA QUE: saber a que paginas puede acceder segun sus roles
- *    f. Guardar en ProtectedSessionStorage
+ *    c. CargarDatosRolesYRutas(): POST /api/consultas/ejecutarconsultaparametrizada
+ *       UNA SOLA consulta SQL con JOINs que trae: nombre usuario, roles y rutas
+ *       PARA QUE: saber quien es, que roles tiene y a que paginas puede acceder
+ *       VENTAJA: 1 llamada HTTP en vez de 5 (ver "FORMA ANTERIOR" abajo)
+ *    d. Guardar en ProtectedSessionStorage
  *       PARA QUE: recordar la sesion si el usuario refresca (F5)
  * 4. Redirige a "/" (inicio)
  * 5. En cada pagina, MainLayout verifica _auth.TieneAcceso(ruta)
  *    PARA QUE: si el usuario intenta acceder a una ruta no permitida -> /sin-acceso (403)
+ *
+ * FORMA ANTERIOR (sin ConsultasController — 5 llamadas HTTP separadas):
+ * =====================================================================
+ * Antes, el paso 3c se hacia con 5 GETs separados al CRUD generico:
+ *   3c. CargarDatosUsuario(): GET /api/usuario?limite=999999
+ *       -> Traia TODOS los usuarios y filtraba en memoria por email
+ *   3d. CargarRoles():
+ *       -> GET /api/rol_usuario?limite=999999 (TODOS los roles-usuario)
+ *       -> GET /api/rol?limite=999999 (TODOS los roles)
+ *       -> Filtraba en memoria: solo los que coincidian con el email
+ *   3e. CargarRutasPermitidas():
+ *       -> GET /api/rutarol?limite=999999 (TODAS las rutas-rol)
+ *       -> GET /api/ruta?limite=999999 (TODAS las rutas)
+ *       -> Filtraba en memoria: solo las rutas de los roles del usuario
+ *
+ * PROBLEMA: Cada GET traia la tabla COMPLETA (todos los registros) y luego
+ * filtraba en C#. Si habia 1000 usuarios, traia los 1000 solo para buscar 1.
+ * Ademas eran 5 llamadas HTTP (latencia de red x 5).
+ *
+ * SOLUCION ACTUAL: Una sola consulta SQL con JOINs que filtra en la BD:
+ *   POST /api/consultas/ejecutarconsultaparametrizada
+ *   SELECT r.nombre AS nombre_rol, ruta_t.ruta
+ *   FROM usuario u
+ *   JOIN rol_usuario rolu ON u.email = rolu.fkemail
+ *   JOIN rol r ON rolu.fkidrol = r.id
+ *   JOIN rutarol rr ON r.id = rr.fkidrol
+ *   JOIN ruta ruta_t ON rr.fkidruta = ruta_t.id
+ *   WHERE u.email = @email
+ *
+ * COMPARACION:
+ *   | Aspecto          | Antes (5 GETs)           | Ahora (1 SQL)        |
+ *   |------------------|--------------------------|----------------------|
+ *   | Llamadas HTTP    | 5                        | 1                    |
+ *   | Datos traidos    | Tablas COMPLETAS         | Solo filas del user  |
+ *   | Filtro           | En memoria (C#)          | En BD (SQL WHERE)    |
+ *   | Controlador      | EntidadesController      | ConsultasController  |
+ *   | Endpoint         | GET /api/{tabla}          | POST /api/consultas  |
  *
  * TABLAS INVOLUCRADAS:
  * ====================
@@ -88,7 +123,8 @@
  * OPTIMIZACIONES:
  * ===============
  * - PrecargarEstructura(): UNA sola llamada cachea TODAS las tablas (no una por una)
- * - Task.WhenAll: las llamadas HTTP se hacen en paralelo (mas rapido)
+ * - ConsultasController: UNA sola consulta SQL trae roles + rutas (no 5 GETs separados)
+ * - La consulta SQL se arma DINAMICAMENTE con los nombres de FK/PK descubiertos
  * - _cache: los resultados de estructura se guardan para no repetir consultas
  */
 
@@ -233,6 +269,66 @@ public class AuthService
         catch (Exception ex) { return (false, ex.Message); }
     }
 
+    /// <summary>
+    /// Envia una consulta SQL parametrizada a ConsultasController.
+    /// Se usa para cargar roles y rutas en UNA sola llamada en vez de 5 GETs.
+    ///
+    /// Endpoint: POST /api/consultas/ejecutarconsultaparametrizada
+    /// Envia: {"consulta": "SELECT ...", "parametros": {"email": "valor"}}
+    /// Recibe: {"resultados": [{...}, {...}], "total": N}
+    ///
+    /// DIFERENCIA CON Listar():
+    /// - Listar() llama GET /api/{tabla} -> trae toda la tabla, filtra en C#
+    /// - PostConsulta() llama POST /api/consultas -> ejecuta SQL con WHERE, filtra en BD
+    ///
+    /// VENTAJA: La BD hace el JOIN y el filtro, solo viajan los datos necesarios.
+    /// </summary>
+    private async Task<List<Dictionary<string, object?>>> PostConsulta(
+        string consulta, Dictionary<string, object?> parametros)
+    {
+        try
+        {
+            // Armar el body del POST: {"consulta": "SELECT ...", "parametros": {...}}
+            var body = new Dictionary<string, object?>
+            {
+                ["consulta"] = consulta,
+                ["parametros"] = parametros
+            };
+
+            var content = new StringContent(
+                JsonSerializer.Serialize(body),
+                System.Text.Encoding.UTF8, "application/json");
+
+            // POST /api/consultas/ejecutarconsultaparametrizada
+            var resp = await _http.PostAsync("/api/consultas/ejecutarconsultaparametrizada", content);
+
+            if (!resp.IsSuccessStatusCode) return new();
+
+            var json = await resp.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+
+            var result = new List<Dictionary<string, object?>>();
+
+            // La respuesta tiene "resultados" (no "datos" como en EntidadesController)
+            // ConsultasController retorna: {"resultados": [...], "total": N}
+            // EntidadesController retorna: {"datos": [...], "total": N}
+            if (doc.RootElement.TryGetProperty("resultados", out var resultados) ||
+                doc.RootElement.TryGetProperty("Resultados", out resultados))
+            {
+                foreach (var item in resultados.EnumerateArray())
+                {
+                    var dict = new Dictionary<string, object?>();
+                    foreach (var prop in item.EnumerateObject())
+                        dict[prop.Name] = prop.Value.ValueKind == JsonValueKind.Null
+                            ? null : prop.Value.ToString();
+                    result.Add(dict);
+                }
+            }
+            return result;
+        }
+        catch { return new(); }
+    }
+
     // ══════════════════════════════════════════════════════════
     // DESCUBRIMIENTO DINAMICO DE PKs Y FKs
     // ══════════════════════════════════════════════════════════
@@ -370,11 +466,13 @@ public class AuthService
     /// <summary>
     /// Proceso completo de login:
     ///   1. Precargar estructura BD + autenticar con BCrypt (EN PARALELO)
-    ///   2. Cargar datos del usuario + roles (EN PARALELO)
-    ///   3. Cargar rutas permitidas
-    ///   4. Guardar todo en ProtectedSessionStorage
+    ///   2. Cargar datos + roles + rutas con UNA SOLA consulta SQL
+    ///   3. Guardar todo en ProtectedSessionStorage
     ///
-    /// Las llamadas en paralelo (Task.WhenAll) hacen el login mas rapido.
+    /// OPTIMIZACION:
+    /// - Paso 1 usa Task.WhenAll (estructura + auth en paralelo)
+    /// - Paso 2 usa ConsultasController (1 SQL en vez de 5 GETs)
+    /// - Resultado: login mas rapido, menos trafico de red
     /// </summary>
     public async Task<(bool ok, string msg)> Login(string email, string contrasena)
     {
@@ -405,17 +503,18 @@ public class AuthService
             Usuario = email;
 
             // ── PASO 2: AUTORIZACION (¿Que puedes hacer?) ──
-            // Cargar datos del usuario (nombre) + sus roles EN PARALELO
-            var datosTask = CargarDatosUsuario(email);  // Busca nombre, debe_cambiar_contrasena
-            var rolesTask = CargarRoles(email);          // Busca roles: Admin, Vendedor, etc.
-            await Task.WhenAll(datosTask, rolesTask);
+            // UNA SOLA llamada a ConsultasController:
+            //   POST /api/consultas/ejecutarconsultaparametrizada
+            //   Consulta SQL con JOINs que trae: nombre, roles y rutas del usuario
+            //
+            // ANTES eran 5 llamadas GET separadas:
+            //   GET /api/usuario, GET /api/rol_usuario, GET /api/rol,
+            //   GET /api/rutarol, GET /api/ruta
+            // Ahora es 1 sola consulta que filtra en la BD (mas rapido y eficiente)
+            await CargarDatosRolesYRutas(email);
 
             // Si no tiene roles, no puede entrar (no sabemos que puede hacer)
             if (Roles.Count == 0) return (false, "El usuario no tiene roles asignados.");
-
-            // Cargar rutas permitidas (depende de Roles, por eso va despues)
-            // Busca: que paginas puede acceder segun sus roles
-            await CargarRutasPermitidas();
 
             // ── PASO 3: ENCRIPTACION (guardar sesion protegida) ──
             // Guardar en ProtectedSessionStorage del navegador.
@@ -440,69 +539,206 @@ public class AuthService
         }
     }
 
+    // ══════════════════════════════════════════════════════════
+    // CARGAR DATOS, ROLES Y RUTAS CON UNA SOLA CONSULTA SQL
+    // ══════════════════════════════════════════════════════════
+    //
+    // ANTES: 5 llamadas GET separadas a EntidadesController (GET /api/{tabla})
+    //   1. GET /api/usuario          -> traer TODOS los usuarios, buscar el nombre
+    //   2. GET /api/rol_usuario      -> traer TODOS los rol_usuario, filtrar por email
+    //   3. GET /api/rol              -> traer TODOS los roles, mapear ids a nombres
+    //   4. GET /api/rutarol          -> traer TODOS los rutarol, filtrar por rol
+    //   5. GET /api/ruta             -> traer TODAS las rutas, mapear ids a paths
+    //   Problema: traia tablas COMPLETAS y filtraba en C# (ineficiente)
+    //
+    // AHORA: 1 sola llamada POST a ConsultasController
+    //   POST /api/consultas/ejecutarconsultaparametrizada
+    //   La BD hace los JOINs y el WHERE, solo viajan las filas del usuario
+    //
+    // La consulta SQL se arma DINAMICAMENTE usando los nombres de FK/PK
+    // descubiertos por PrecargarEstructura(). Ejemplo con bdfacturas:
+    //
+    //   SELECT r.nombre AS nombre_rol, ruta_t.ruta
+    //   FROM usuario u
+    //   JOIN rol_usuario rolu ON u.email = rolu.fkemail        <- FK descubierto
+    //   JOIN rol r ON rolu.fkidrol = r.id                      <- FK descubierto
+    //   JOIN rutarol rr ON r.id = rr.fkidrol                   <- FK descubierto
+    //   JOIN ruta ruta_t ON rr.fkidruta = ruta_t.id            <- FK descubierto
+    //   WHERE u.email = @email
+    //
+    // Los nombres "fkemail", "fkidrol", "fkidruta" NO estan hardcodeados.
+    // Se descubren de la estructura de la BD. Si otra BD usa "id_usuario"
+    // en vez de "fkemail", funciona igual.
+    // ══════════════════════════════════════════════════════════
+
     /// <summary>
-    /// Carga nombre y flag debe_cambiar_contrasena del usuario.
+    /// Carga nombre del usuario, roles y rutas permitidas en UNA SOLA consulta SQL.
+    ///
+    /// Usa ConsultasController (POST /api/consultas/ejecutarconsultaparametrizada)
+    /// en vez de 5 llamadas GET separadas al CRUD generico.
+    ///
+    /// La consulta SQL se arma dinamicamente con los FK/PK descubiertos
+    /// por PrecargarEstructura(). Hace JOINs de 5 tablas y filtra por email.
+    ///
+    /// Resultado: cada fila tiene {nombre_rol, ruta}.
+    /// Se extraen roles unicos y rutas unicas de las filas.
     /// </summary>
-    private async Task CargarDatosUsuario(string email)
+    private async Task CargarDatosRolesYRutas(string email)
+    {
+        Roles.Clear();
+        RutasPermitidas.Clear();
+        NombreUsuario = email; // Default: usar email si no tiene campo "nombre"
+
+        try
+        {
+            // ── Paso 1: Descubrir nombres de FK/PK de la estructura ──
+            // PrecargarEstructura() ya se ejecuto antes (en Login).
+            // Estos metodos leen del _cache, no hacen llamadas HTTP.
+            var pkUsuario = await ObtenerPK("usuario");          // ej: "email"
+            var pkRol = await ObtenerPK("rol");                  // ej: "id"
+            var pkRuta = await ObtenerPK("ruta");                // ej: "id"
+            var fkEmail = await ObtenerFK("rol_usuario", "usuario"); // ej: "fkemail"
+            var fkRolEnRolUsuario = await ObtenerFK("rol_usuario", "rol"); // ej: "fkidrol"
+            var fkRolEnRutarol = await ObtenerFK("rutarol", "rol");   // ej: "fkidrol"
+            var fkRutaEnRutarol = await ObtenerFK("rutarol", "ruta"); // ej: "fkidruta"
+
+            // Si faltan FKs criticos, no se puede armar la consulta
+            if (fkEmail == null || fkRolEnRolUsuario == null || fkRolEnRutarol == null)
+            {
+                // Fallback: intentar con los GETs individuales (metodo viejo)
+                await CargarDatosUsuarioFallback(email);
+                await CargarRolesFallback(email);
+                await CargarRutasPermitidasFallback();
+                return;
+            }
+
+            // ── Paso 2: Armar la consulta SQL dinamicamente ──
+            // Los nombres de columnas vienen de la estructura, no estan hardcodeados.
+            // Esto permite que funcione con cualquier BD que tenga las 5 tablas.
+            //
+            // Ejemplo con bdfacturas_sqlserver_local:
+            //   pkUsuario = "email", pkRol = "id", pkRuta = "id"
+            //   fkEmail = "fkemail", fkRolEnRolUsuario = "fkidrol"
+            //   fkRolEnRutarol = "fkidrol", fkRutaEnRutarol = "fkidruta"
+            //
+            // Genera:
+            //   SELECT r.nombre AS nombre_rol, ruta_t.ruta
+            //   FROM usuario u
+            //   JOIN rol_usuario rolu ON u.email = rolu.fkemail
+            //   JOIN rol r ON rolu.fkidrol = r.id
+            //   JOIN rutarol rr ON r.id = rr.fkidrol
+            //   JOIN ruta ruta_t ON rr.fkidruta = ruta_t.id
+            //   WHERE u.email = @email
+
+            var sql = $@"SELECT r.nombre AS nombre_rol, ruta_t.ruta
+FROM usuario u
+JOIN rol_usuario rolu ON u.{pkUsuario} = rolu.{fkEmail}
+JOIN rol r ON rolu.{fkRolEnRolUsuario} = r.{pkRol}
+JOIN rutarol rr ON r.{pkRol} = rr.{fkRolEnRutarol}
+JOIN ruta ruta_t ON rr.{fkRutaEnRutarol} = ruta_t.{pkRuta}
+WHERE u.{pkUsuario} = @email";
+
+            // ── Paso 3: Ejecutar la consulta via ConsultasController ──
+            // POST /api/consultas/ejecutarconsultaparametrizada
+            // El parametro @email previene inyeccion SQL (parametrizado)
+            var resultados = await PostConsulta(sql, new Dictionary<string, object?>
+            {
+                ["email"] = email
+            });
+
+            // ── Paso 4: Extraer roles y rutas de los resultados ──
+            // Cada fila tiene: {nombre_rol: "Contador", ruta: "/cliente"}
+            // Un usuario con 2 roles y 5 rutas puede tener 10+ filas (producto cartesiano)
+            // Usamos HashSet/Contains para evitar duplicados
+            foreach (var fila in resultados)
+            {
+                // Extraer rol (puede repetirse en varias filas)
+                var nombreRol = fila.GetValueOrDefault("nombre_rol")?.ToString() ?? "";
+                if (!string.IsNullOrEmpty(nombreRol) && !Roles.Contains(nombreRol))
+                    Roles.Add(nombreRol);
+
+                // Extraer ruta (puede repetirse si varios roles tienen acceso)
+                var ruta = fila.GetValueOrDefault("ruta")?.ToString() ?? "";
+                if (!string.IsNullOrEmpty(ruta))
+                    RutasPermitidas.Add(ruta); // HashSet ignora duplicados automaticamente
+            }
+
+            // ── Paso 5: Cargar nombre del usuario (campo opcional) ──
+            // El nombre no viene en la consulta de roles/rutas porque la tabla usuario
+            // puede no tener campo "nombre" (depende de la BD).
+            // Se busca con un GET simple a /api/usuario (solo 1 registro nos interesa).
+            await CargarDatosUsuarioFallback(email);
+        }
+        catch
+        {
+            NombreUsuario = email;
+        }
+    }
+
+    /// <summary>
+    /// Busca el nombre y debe_cambiar_contrasena del usuario.
+    /// Usa GET /api/usuario (CRUD generico) porque el campo "nombre"
+    /// es opcional y puede no existir en todas las BDs.
+    /// Este es el unico GET que queda del enfoque anterior.
+    /// </summary>
+    private async Task CargarDatosUsuarioFallback(string email)
     {
         try
         {
-            // Descubrir la PK de la tabla usuario (ej: "email")
             var pkUsuario = await ObtenerPK("usuario");
-
-            // Traer todos los usuarios de la BD
             var usuarios = await Listar("usuario");
-
-            // Buscar el usuario que coincida con el email del login
             foreach (var u in usuarios)
             {
                 var val = u.GetValueOrDefault(pkUsuario)?.ToString() ?? "";
-                // Comparar sin importar mayusculas/minusculas
                 if (val.Equals(email, StringComparison.OrdinalIgnoreCase))
                 {
-                    // Guardar el nombre para mostrar en la barra superior
                     NombreUsuario = u.GetValueOrDefault("nombre")?.ToString() ?? email;
-                    // Verificar si debe cambiar contrasena (campo booleano en BD)
                     var debeCambiar = u.GetValueOrDefault("debe_cambiar_contrasena")?.ToString();
                     DebeCambiarContrasena = debeCambiar == "True" || debeCambiar == "true" || debeCambiar == "1";
                     break;
                 }
             }
         }
-        // Si falla, usar el email como nombre (mejor que nada)
         catch { NombreUsuario = email; }
     }
 
+    // ══════════════════════════════════════════════════════════
+    // FALLBACK: Metodos del enfoque anterior (5 GETs separados)
+    // ══════════════════════════════════════════════════════════
+    //
+    // Estos metodos se usan SOLO si ConsultasController no esta disponible
+    // (por ejemplo, si faltan FKs en la estructura o si la API no tiene
+    // el endpoint de consultas). Son los mismos metodos del enfoque anterior.
+    //
+    // FORMA VIEJA: 5 llamadas GET -> traer tablas completas -> filtrar en C#
+    // FORMA NUEVA: 1 llamada POST -> consulta SQL con JOINs -> filtrar en BD
+    // ══════════════════════════════════════════════════════════
+
     /// <summary>
-    /// Carga los roles del usuario consultando rol_usuario + rol.
-    /// Usa FKs dinamicos para saber que columnas relacionan las tablas.
-    /// Las dos consultas (rol_usuario y rol) se hacen EN PARALELO.
+    /// [FALLBACK] Carga roles con 2 GETs separados (enfoque anterior).
+    /// Solo se usa si ConsultasController falla o no descubre los FKs.
     /// </summary>
-    private async Task CargarRoles(string email)
+    private async Task CargarRolesFallback(string email)
     {
         Roles.Clear();
         try
         {
-            // Descubrir FKs: que columna de rol_usuario apunta a usuario? y a rol?
             var fkEmail = await ObtenerFK("rol_usuario", "usuario");
             var fkRol = await ObtenerFK("rol_usuario", "rol");
             if (fkEmail == null || fkRol == null) return;
             var pkRol = await ObtenerPK("rol");
 
-            // Traer datos EN PARALELO
             var t1 = Listar("rol_usuario");
             var t2 = Listar("rol");
             await Task.WhenAll(t1, t2);
             var rolUsuarios = t1.Result;
             var roles = t2.Result;
 
-            // Crear mapa: id_rol -> nombre_rol (ej: "1" -> "Administrador")
             var rolMap = new Dictionary<string, string>();
             foreach (var r in roles)
                 rolMap[r.GetValueOrDefault(pkRol)?.ToString() ?? ""] =
                     r.GetValueOrDefault("nombre")?.ToString() ?? "";
 
-            // Filtrar: solo los roles que pertenecen a este usuario
             foreach (var ru in rolUsuarios)
             {
                 var ruEmail = ru.GetValueOrDefault(fkEmail)?.ToString() ?? "";
@@ -518,11 +754,10 @@ public class AuthService
     }
 
     /// <summary>
-    /// Carga las rutas (paginas) que el usuario puede acceder segun sus roles.
-    /// Consulta rutarol + rol + ruta EN PARALELO.
-    /// El resultado se usa en MainLayout para verificar acceso.
+    /// [FALLBACK] Carga rutas con 3 GETs separados (enfoque anterior).
+    /// Solo se usa si ConsultasController falla o no descubre los FKs.
     /// </summary>
-    private async Task CargarRutasPermitidas()
+    private async Task CargarRutasPermitidasFallback()
     {
         RutasPermitidas.Clear();
         try
@@ -533,7 +768,6 @@ public class AuthService
             var pkRol = await ObtenerPK("rol");
             var pkRuta = await ObtenerPK("ruta");
 
-            // Traer 3 tablas EN PARALELO
             var t1 = Listar("rutarol");
             var t2 = Listar("rol");
             var t3 = Listar("ruta");
@@ -542,19 +776,16 @@ public class AuthService
             var rolesData = t2.Result;
             var rutasData = t3.Result;
 
-            // IDs de los roles del usuario
             var rolIds = rolesData
                 .Where(r => Roles.Contains(r.GetValueOrDefault("nombre")?.ToString() ?? ""))
                 .Select(r => r.GetValueOrDefault(pkRol)?.ToString() ?? "")
                 .ToHashSet();
 
-            // Mapa: id_ruta -> path (ej: "1" -> "/producto")
             var rutaMap = new Dictionary<string, string>();
             foreach (var r in rutasData)
                 rutaMap[r.GetValueOrDefault(pkRuta)?.ToString() ?? ""] =
                     r.GetValueOrDefault("ruta")?.ToString() ?? "";
 
-            // Filtrar: rutas asignadas a los roles del usuario
             foreach (var rr in rutasRol)
             {
                 var rolId = rr.GetValueOrDefault(fkRolEnRutarol)?.ToString() ?? "";

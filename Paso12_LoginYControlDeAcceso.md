@@ -16,6 +16,7 @@
 - **Recuperar contrasena** genera temporal aleatoria, la guarda con BCrypt, la envia por correo SMTP (Gmail), y fuerza cambio en el siguiente login
 - **Sesion persistente** con ProtectedSessionStorage (encriptada con Data Protection API, sobrevive F5, se pierde al cerrar tab)
 - **Descubrimiento dinamico** de PKs y FKs via `GET /api/estructuras/basedatos` (compatible Postgres y SqlServer, sin hardcodear nombres de columnas)
+- **ConsultasController**: los roles y rutas del usuario se cargan con UNA sola consulta SQL (JOINs de 5 tablas) en vez de 5 GETs separados al CRUD generico
 - **3 capas de seguridad**: BCrypt protege la BD, JWT protege la API, Sesion protege el frontend
 - **[Authorize]** en la API: si se agrega este atributo en los controllers, la API rechaza peticiones sin token JWT valido
 
@@ -136,35 +137,40 @@ CREATE TABLE rutarol (
          |     v
          |   SE LLAMA AuthService.Login(email, contrasena):
          |     |
-         |     +-- PASO 1 (en paralelo):
+         |     +-- PASO 1 (en paralelo — 2 llamadas al mismo tiempo):
          |     |     |
-         |     |     +-- DESCARGA la estructura de TODA la BD en una sola llamada.
-         |     |     |   CACHEA los nombres de PKs y FKs para no repetir consultas.
+         |     |     +-- GET /api/estructuras/basedatos
+         |     |     |   DESCARGA la estructura de TODA la BD en una sola llamada.
+         |     |     |   CACHEA los nombres de PKs y FKs para armar la consulta SQL.
          |     |     |
-         |     |     +-- ENVIA las credenciales a la API C#:
-         |     |           POST /api/autenticacion/token
+         |     |     +-- POST /api/autenticacion/token
+         |     |           ENVIA las credenciales a la API C#.
          |     |           La API BUSCA el usuario en la BD.
          |     |           La API COMPARA la contrasena con BCrypt (hash irreversible).
          |     |           Si COINCIDE -> GENERA un token JWT y lo DEVUELVE.
          |     |           Si NO coincide -> RECHAZA con error 401.
          |     |
-         |     +-- PASO 2 (en paralelo):
+         |     +-- PASO 2 (UNA sola llamada — ConsultasController):
          |     |     |
-         |     |     +-- CONSULTA la tabla rol_usuario y rol.
-         |     |     |   DESCUBRE que columna es FK hacia usuario (ej: "fkemail").
-         |     |     |   FILTRA los roles que pertenecen a este email.
-         |     |     |   OBTIENE los nombres: ["Administrador", "Profesor", ...].
+         |     |     +-- POST /api/consultas/ejecutarconsultaparametrizada
+         |     |     |   ARMA una consulta SQL con JOINs usando los FK/PK descubiertos:
          |     |     |
-         |     |     +-- CONSULTA la tabla usuario.
-         |     |         BUSCA el nombre del usuario para mostrar en la barra.
+         |     |     |   SELECT r.nombre AS nombre_rol, ruta_t.ruta
+         |     |     |   FROM usuario u
+         |     |     |   JOIN rol_usuario rolu ON u.email = rolu.fkemail
+         |     |     |   JOIN rol r ON rolu.fkidrol = r.id
+         |     |     |   JOIN rutarol rr ON r.id = rr.fkidrol
+         |     |     |   JOIN ruta ruta_t ON rr.fkidruta = ruta_t.id
+         |     |     |   WHERE u.email = @email
+         |     |     |
+         |     |     |   La BD hace el JOIN y el filtro. Solo viajan las filas
+         |     |     |   de ESTE usuario (no tablas completas).
+         |     |     |
+         |     |     +-- Del resultado EXTRAE:
+         |     |           Roles unicos: ["Administrador", "Profesor", ...]
+         |     |           Rutas unicas: ["/facultad", "/asignatura", ...]
          |     |
          |     +-- PASO 3:
-         |     |     |
-         |     |     +-- CONSULTA rutarol, rol y ruta (3 consultas en paralelo).
-         |     |     |   CRUZA los roles del usuario con las rutas asignadas.
-         |     |     +-- OBTIENE las rutas permitidas: ["/facultad", "/asignatura", ...].
-         |     |
-         |     +-- PASO 4:
          |           |
          |           +-- GUARDA en ProtectedSessionStorage (encriptado en el navegador):
          |                 "usuario" = "ccastro@correo.itm.edu.co"
@@ -199,10 +205,12 @@ CREATE TABLE rutarol (
 > genera un token JWT (una credencial temporal con expiracion) y lo devuelve.
 > Si no coincide, rechaza con un error.
 >
-> Con el login exitoso, el sistema carga en paralelo los datos del usuario
-> (su nombre para mostrar en la barra) y sus roles (Administrador, Profesor, etc).
-> Luego, con los roles ya cargados, consulta que paginas puede acceder cada rol
-> y arma la lista de rutas permitidas.
+> Con el login exitoso, el sistema usa los nombres de FK y PK que descubrio
+> de la estructura para armar UNA sola consulta SQL con JOINs de 5 tablas.
+> Esta consulta se envia a ConsultasController, que la ejecuta en la base de datos
+> y devuelve solo las filas que pertenecen a este usuario. Del resultado se
+> extraen los roles unicos (Administrador, Profesor, etc.) y las rutas unicas
+> (/facultad, /asignatura, etc.) que el usuario puede acceder.
 >
 > Toda esta informacion (usuario, token, roles, rutas) se guarda encriptada en
 > el Session Storage del navegador. Encriptada porque Blazor usa ProtectedSessionStorage,
@@ -512,8 +520,8 @@ En los controllers de la API generica. Los archivos estan en:
 ApiGenericaCsharp/Controllers/
   EntidadesController.cs          <-- CRUD generico (listar, crear, actualizar, eliminar)
   AutenticacionController.cs      <-- Login (este NO debe tener [Authorize])
-  EstructurasController.cs        <-- Estructura BD (puede o no tener [Authorize])
-  ConsultasController.cs          <-- Consultas SQL
+  EstructurasController.cs        <-- Estructura BD (tiene [AllowAnonymous])
+  ConsultasController.cs          <-- Consultas SQL (se usa para cargar roles y rutas del login)
 ```
 
 ### Opciones de proteccion
@@ -746,10 +754,21 @@ automaticamente. No hay que cambiar codigo.
 
 | Optimizacion | Que hace | Por que |
 |---|---|---|
-| `PrecargarEstructura()` | 1 sola llamada para TODA la BD | En vez de 5 llamadas (una por tabla) |
-| `Task.WhenAll` | Llamadas HTTP en paralelo | Login mas rapido (no secuencial) |
+| `PrecargarEstructura()` | 1 sola llamada para TODA la BD | Descubre FK/PK para armar la consulta SQL |
+| `ConsultasController` | 1 consulta SQL con JOINs para roles + rutas | En vez de 5 GETs que traian tablas completas |
+| `Task.WhenAll` | Estructura + autenticacion en paralelo | Login mas rapido (no secuencial) |
 | `_cache` | Guarda PKs/FKs en memoria | No repite consultas a la API |
 | `ProtectedSessionStorage` | Persiste sesion al refrescar (F5) | No pide login de nuevo |
+
+### Comparacion: antes vs ahora
+
+| Aspecto | Antes (5 GETs) | Ahora (1 SQL) |
+|---------|---------------|---------------|
+| Llamadas HTTP post-login | 5 | 1 |
+| Datos transferidos | Tablas COMPLETAS | Solo filas del usuario |
+| Donde se filtra | En memoria (C#) | En la BD (SQL WHERE) |
+| Controlador usado | EntidadesController | ConsultasController |
+| Endpoint | GET /api/{tabla}?limite=999999 | POST /api/consultas/ejecutarconsultaparametrizada |
 
 ---
 
@@ -1008,3 +1027,182 @@ Abrir `appsettings.json` del proyecto y poner los datos:
 21. Haga login con la temporal -> redirige a `/cambiar-contrasena` (forzado)
 22. Escriba nueva contrasena (minimo 6 chars, 1 mayuscula, 1 numero)
 23. Confirme -> redirige a `/` y puede navegar normalmente
+
+---
+
+## ConsultasController: como se usa para cargar roles y rutas
+
+### Que es ConsultasController?
+
+Es un endpoint de la API generica C# que permite ejecutar consultas SQL
+parametrizadas. A diferencia de EntidadesController (que hace CRUD tabla por tabla),
+ConsultasController puede hacer JOINs de varias tablas en una sola llamada.
+
+```
+EntidadesController:  GET /api/usuario          -> trae TODA la tabla usuario
+                      GET /api/rol              -> trae TODA la tabla rol
+                      GET /api/rol_usuario      -> trae TODA la tabla rol_usuario
+                      (3 llamadas, 3 tablas completas, filtrar en C#)
+
+ConsultasController:  POST /api/consultas/ejecutarconsultaparametrizada
+                      -> 1 consulta SQL con JOINs, WHERE filtra en la BD
+                      -> solo viajan las filas de ESTE usuario
+```
+
+### Como se arma la consulta SQL
+
+El AuthService arma la consulta DINAMICAMENTE usando los nombres de FK y PK
+que descubrio de `GET /api/estructuras/basedatos`. Los nombres NO estan
+hardcodeados — se descubren en tiempo de ejecucion.
+
+```
+PrecargarEstructura() descubre:
+  pk_usuario = "email"
+  pk_rol = "id"
+  pk_ruta = "id"
+  rol_usuario->usuario = "fkemail"
+  rol_usuario->rol = "fkidrol"
+  rutarol->rol = "fkidrol"
+  rutarol->ruta = "fkidruta"
+
+Con esos valores arma:
+
+  SELECT r.nombre AS nombre_rol, ruta_t.ruta
+  FROM usuario u
+  JOIN rol_usuario rolu ON u.email = rolu.fkemail        <- descubierto
+  JOIN rol r ON rolu.fkidrol = r.id                      <- descubierto
+  JOIN rutarol rr ON r.id = rr.fkidrol                   <- descubierto
+  JOIN ruta ruta_t ON rr.fkidruta = ruta_t.id            <- descubierto
+  WHERE u.email = @email                                 <- parametrizado
+```
+
+Si otra base de datos usa nombres diferentes (ej: `id_usuario` en vez de `fkemail`),
+la consulta se arma correctamente porque los nombres se descubren, no se hardcodean.
+
+### Que devuelve la consulta
+
+Para un usuario con rol "Contador" y 3 rutas permitidas:
+
+```json
+{
+  "resultados": [
+    {"nombre_rol": "Contador", "ruta": "/home"},
+    {"nombre_rol": "Contador", "ruta": "/cliente"},
+    {"nombre_rol": "Contador", "ruta": "/producto"}
+  ],
+  "total": 3
+}
+```
+
+Para un usuario con 5 roles y 15 rutas, devuelve mas filas (producto cartesiano).
+El AuthService extrae roles unicos y rutas unicas del resultado.
+
+### El parametro @email previene inyeccion SQL
+
+La consulta usa `@email` como parametro, NO concatenacion de strings.
+ConsultasController convierte `@email` a un SqlParameter, que es seguro:
+
+```
+INSEGURO (concatenar):  WHERE u.email = '" + email + "'    <- inyeccion SQL posible
+SEGURO (parametrizar):  WHERE u.email = @email              <- la BD escapa el valor
+```
+
+### Fallback: si ConsultasController no funciona
+
+Si la API no tiene ConsultasController o si no se descubren los FK necesarios,
+el AuthService usa automaticamente los metodos del enfoque anterior (5 GETs).
+Esto asegura que el login funcione aunque el endpoint de consultas no exista.
+
+---
+
+## Tabla resumen de endpoints usados en el login
+
+| # | Momento | Endpoint | Controlador | Para que |
+|---|---------|----------|-------------|----------|
+| 1 | Antes del login | `GET /api/estructuras/basedatos` | EstructurasController | Descubrir PKs y FKs de todas las tablas |
+| 2 | Login | `POST /api/autenticacion/token` | AutenticacionController | Verificar contrasena con BCrypt y generar JWT |
+| 3 | Post-login | `POST /api/consultas/ejecutarconsultaparametrizada` | ConsultasController | Cargar roles y rutas con UNA sola consulta SQL |
+| 4 | Cambiar clave | `PUT /api/usuario/{pk}/{val}?camposEncriptar=contrasena` | EntidadesController | Guardar nueva contrasena con BCrypt |
+
+**Total: 3 llamadas HTTP para hacer login** (estructura + autenticacion + roles/rutas).
+
+---
+
+## Forma anterior sin ConsultasController (referencia)
+
+Antes de usar ConsultasController, el login usaba 7 llamadas HTTP al CRUD generico.
+Esta forma todavia funciona como fallback si ConsultasController no esta disponible.
+
+### Endpoints que usaba (forma anterior)
+
+| # | Momento | Endpoint | Para que |
+|---|---------|----------|----------|
+| 1 | Antes del login | `GET /api/estructuras/basedatos` | Descubrir PKs y FKs |
+| 2 | Login | `POST /api/autenticacion/token` | Verificar BCrypt, generar JWT |
+| 3 | Post-login | `GET /api/usuario?limite=999999` | Traer TODOS los usuarios, buscar nombre |
+| 4 | Post-login | `GET /api/rol_usuario?limite=999999` | Traer TODOS los rol_usuario, filtrar por email |
+| 5 | Post-login | `GET /api/rol?limite=999999` | Traer TODOS los roles, mapear id a nombre |
+| 6 | Post-login | `GET /api/rutarol?limite=999999` | Traer TODOS los rutarol, filtrar por rol |
+| 7 | Post-login | `GET /api/ruta?limite=999999` | Traer TODAS las rutas, mapear id a path |
+
+**Total: 7 llamadas HTTP** (2 + 5 GETs al CRUD generico).
+
+### Diagrama del flujo anterior
+
+```
+Login exitoso
+    |
+    +-- EN PARALELO:
+    |     |
+    |     +-- GET /api/usuario (999999 registros)
+    |     |   -> Recorre todos, busca email == "admin@test.com"
+    |     |   -> Obtiene: nombre = "Carlos", debe_cambiar = false
+    |     |
+    |     +-- GET /api/rol_usuario (999999 registros)
+    |     |   -> Recorre todos, filtra fkemail == "admin@test.com"
+    |     |   -> Obtiene: fkidrol = [1, 3]
+    |     |
+    |     +-- GET /api/rol (todos los roles)
+    |         -> Mapea: 1 = "Administrador", 3 = "Vendedor"
+    |
+    +-- DESPUES (depende de los roles):
+          |
+          +-- EN PARALELO:
+                |
+                +-- GET /api/rutarol (todos los rutarol)
+                |   -> Filtra: fkidrol IN [1, 3]
+                |   -> Obtiene: fkidruta = [1, 2, 3, 5, 7]
+                |
+                +-- GET /api/ruta (todas las rutas)
+                    -> Mapea: 1="/home", 2="/cliente", 3="/producto", ...
+```
+
+### Problema de esta forma
+
+Cada GET traia la tabla **COMPLETA** con `?limite=999999`. Si habia:
+- 500 usuarios -> traia 500 para buscar 1
+- 200 roles_usuario -> traia 200 para filtrar los de 1 email
+- 50 rutarol -> traia 50 para filtrar 5
+
+Toda la logica de filtrado se hacia en memoria (C#), no en la BD.
+
+### Por que se cambio
+
+```
+ANTES: 5 GETs x tabla completa x filtrar en C#
+  -> 5 llamadas HTTP
+  -> Miles de registros transferidos
+  -> CPU del frontend filtrando
+
+AHORA: 1 POST con SQL x filtrar en BD
+  -> 1 llamada HTTP
+  -> Solo las filas del usuario
+  -> CPU de la BD filtrando (mas eficiente)
+```
+
+### Codigo de los metodos anteriores (fallback)
+
+Los metodos `CargarRolesFallback()` y `CargarRutasPermitidasFallback()` en
+AuthService.cs conservan esta logica para usarla si ConsultasController
+no esta disponible. Se activan automaticamente si no se descubren los
+FKs necesarios para armar la consulta SQL.

@@ -99,22 +99,93 @@ CREATE TABLE rutarol (
 
 ---
 
-## Flujo de autenticacion
+## Flujo de autenticacion (paso a paso con diagrama)
 
 ```
-1. Usuario abre http://localhost:5003
-2. MainLayout.OnAfterRenderAsync:
-   a. _auth.Restaurar() -> intenta recuperar sesion del navegador
-   b. No hay sesion -> nav.NavigateTo("/login")
-3. Login.razor: usuario escribe email + contrasena
-4. auth.Login():
-   a. PrecargarEstructura() + POST /api/autenticacion/token  (EN PARALELO)
-   b. CargarDatosUsuario() + CargarRoles()                   (EN PARALELO)
-   c. CargarRutasPermitidas() (rutarol + rol + ruta)          (3 EN PARALELO)
-   d. Guardar en ProtectedSessionStorage
-5. nav.NavigateTo("/")
-6. Cada pagina: MainLayout verifica _auth.TieneAcceso(ruta)
+Usuario abre http://localhost:5003
+         |
+         v
+MainLayout.razor (OnAfterRenderAsync)
+         |
+         +-- _auth.Restaurar() -> intenta leer sesion del navegador
+         |     |
+         |     +-- ProtectedSessionStorage.GetAsync("usuario")
+         |           |
+         |           +-- SI hay sesion -> mostrar pagina + nombre + boton logout
+         |           |
+         |           +-- NO hay sesion -> nav.NavigateTo("/login")
+         |
+         v
+Login.razor
+         |
+         +-- Usuario escribe email + contrasena
+         |
+         +-- Click "Iniciar sesion" -> DoLogin()
+         |     |
+         |     v
+         |   AuthService.Login(email, contrasena)
+         |     |
+         |     +-- PASO 1: PrecargarEstructura() + PostJson("autenticacion/token")
+         |     |     |                                    |
+         |     |     |                                    v
+         |     |     |                  API C#: POST /api/autenticacion/token
+         |     |     |                                    |
+         |     |     |                  BCrypt.Verify(contrasena, hashBD)
+         |     |     |                                    |
+         |     |     |                  <- OK (token JWT) o ERROR (401)
+         |     |     |
+         |     |     +-- Cachea PKs y FKs de TODAS las tablas en UNA llamada
+         |     |
+         |     +-- PASO 2: CargarDatosUsuario() + CargarRoles()  <- EN PARALELO
+         |     |     |                              |
+         |     |     |                              +-- ObtenerFK("rol_usuario","usuario") -> "fkemail"
+         |     |     |                              +-- ObtenerFK("rol_usuario","rol") -> "fkidrol"
+         |     |     |                              +-- GET /api/rol_usuario + GET /api/rol
+         |     |     |                              +-- Filtrar: roles de este email
+         |     |     |
+         |     |     +-- GET /api/usuario -> buscar nombre del usuario
+         |     |
+         |     +-- PASO 3: CargarRutasPermitidas()
+         |     |     |
+         |     |     +-- GET /api/rutarol + GET /api/rol + GET /api/ruta  <- 3 EN PARALELO
+         |     |     +-- Filtrar: rutas asignadas a los roles del usuario
+         |     |
+         |     +-- PASO 4: Guardar en ProtectedSessionStorage
+         |           |
+         |           +-- session.SetAsync("usuario", "ccastro@correo.itm.edu.co")
+         |           +-- session.SetAsync("roles", "Administrador,Profesor,...")
+         |           +-- session.SetAsync("rutas_permitidas", "/facultad,/asignatura,...")
+         |
+         v
+nav.NavigateTo("/") -> vuelve a MainLayout -> _auth.Restaurar() -> AHORA SI hay sesion
 ```
+
+## Como funciona la proteccion de rutas
+
+```csharp
+// MainLayout.razor - OnAfterRenderAsync
+// Se ejecuta DESPUES del primer render (necesario para ProtectedSessionStorage)
+
+protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+    if (firstRender)
+    {
+        await _auth.Restaurar();        // Lee sesion del navegador
+        
+        if (!_auth.EstaAutenticado)      // No hay sesion?
+            _nav.NavigateTo("/login");   // -> Ir a login
+            
+        if (_auth.DebeCambiarContrasena) // Debe cambiar?
+            _nav.NavigateTo("/cambiar-contrasena"); // -> Forzar cambio
+            
+        StateHasChanged();               // Re-renderizar con datos de auth
+    }
+}
+```
+
+**Por que OnAfterRenderAsync y no OnInitialized?**
+Porque ProtectedSessionStorage necesita JavaScript del navegador, y JavaScript
+solo esta disponible DESPUES del primer render. Si se llama antes, da error.
 
 ---
 
@@ -154,19 +225,156 @@ await _session.DeleteAsync("usuario");
 
 ---
 
+## Session Storage: que es, para que y como llegan los datos
+
+### Que es Session Storage?
+
+Es un espacio de almacenamiento del **navegador** (no del servidor).
+Se ve en F12 -> Application -> Session Storage -> http://localhost:5003
+
+```
+Key                 Value
+----------------    ---------------------------
+usuario             CfDJ8JdZdyLIT3BLn0Ti8m0Lk...
+nombre_usuario      CfDJ8JdZdyLIT3BLn0Ti8m0Lk...
+roles               CfDJ8JdZdyLIT3BLn0Ti8m0Lk...
+rutas_permitidas    CfDJ8JdZdyLIT3BLn0Ti8m0Lk...
+```
+
+Los **keys** se ven en texto plano pero los **values** estan encriptados.
+Nadie puede leer que `usuario = carloscastro5033@correo.itm.edu.co` mirando el valor.
+
+### Como llegan los datos ahi?
+
+```
+AuthService.Login() (despues de verificar BCrypt)
+        |
+        v
+await _session.SetAsync("usuario", "carloscastro5033@correo.itm.edu.co");
+await _session.SetAsync("roles", "Administrador,Profesor,...");
+await _session.SetAsync("rutas_permitidas", "/facultad,/asignatura,...");
+        |
+        v
+Blazor internamente:
+  1. Toma el valor "carloscastro5033@correo.itm.edu.co"
+  2. Lo encripta con Data Protection API -> "CfDJ8JdZdyLIT3BLn0Ti8m0Lk..."
+  3. Llama JavaScript: sessionStorage.setItem("usuario", "CfDJ8...")
+  4. El navegador guarda el valor encriptado
+```
+
+### Como se lee de vuelta?
+
+```
+Al refrescar (F5) o navegar a otra pagina:
+
+MainLayout.OnAfterRenderAsync()
+        |
+        v
+await _auth.Restaurar()
+        |
+        v
+var result = await _session.GetAsync<string>("usuario");
+        |
+        +-- JavaScript: sessionStorage.getItem("usuario") -> "CfDJ8..."
+        +-- Blazor desencripta con Data Protection API
+        +-- result.Value = "carloscastro5033@correo.itm.edu.co"
+```
+
+### Por que ProtectedSessionStorage y no SessionStorage normal?
+
+| Aspecto | SessionStorage (JS) | ProtectedSessionStorage (Blazor) |
+|---------|-------------------|--------------------------------|
+| Valores | Texto plano | Encriptados |
+| Manipulable | Si (F12 -> editar) | No (si lo cambian, no desencripta) |
+| Seguridad | Baja | Alta |
+
+Si fuera texto plano, alguien podria abrir F12 y cambiar `roles` a `"Administrador"`
+y tener acceso a todo. Con Protected, el valor encriptado no se puede manipular.
+
+### Session Storage vs Local Storage
+
+| | Session Storage | Local Storage |
+|--|----------------|---------------|
+| Persiste F5 (refrescar) | Si | Si |
+| Persiste cerrar tab | **No** (se borra) | Si (queda) |
+| Compartido entre tabs | No | Si |
+
+Blazor usa Session Storage porque al cerrar el tab la sesion se pierde
+automaticamente (mas seguro).
+
+---
+
 ## Descubrimiento dinamico de PKs y FKs
 
-El AuthService NO hardcodea nombres de columnas. Los descubre consultando la API:
+El AuthService NO hardcodea nombres de columnas. Los descubre consultando la API.
+
+### Como funciona?
 
 ```
-GET /api/estructuras/basedatos  ->  retorna TODA la estructura de la BD
+UNA sola llamada: GET /api/estructuras/basedatos
+
+La API responde con TODAS las tablas, columnas y FKs:
+{
+  "tablas": [
+    {
+      "table_name": "rol_usuario",
+      "columnas": [
+        {"column_name": "fkemail", "is_primary_key": "YES"},
+        {"column_name": "fkidrol", "is_primary_key": "YES"}
+      ],
+      "foreign_keys": [
+        {"column_name": "fkemail", "foreign_table_name": "usuario"},
+        {"column_name": "fkidrol", "foreign_table_name": "rol"}
+      ]
+    }
+  ]
+}
+
+El AuthService extrae y cachea en _cache:
+  "rol_usuario->usuario" = "fkemail"     (FK hacia usuario)
+  "rol_usuario->rol" = "fkidrol"         (FK hacia rol)
+  "pk_usuario" = "email"                 (PK de usuario)
+  "pk_rol" = "id"                        (PK de rol)
 ```
 
-Ejemplo: para saber que columna de `rol_usuario` apunta a `usuario`:
-- La API responde: `foreign_keys: [{column_name: "fkemail", foreign_table_name: "usuario"}]`
-- El servicio cachea: `"rol_usuario->usuario" = "fkemail"`
+### Por que es importante?
 
-Asi funciona con cualquier BD sin importar como se llamen las columnas.
+Asi funciona con CUALQUIER base de datos sin importar como se llamen las columnas.
+Si en otra BD el FK se llama `id_usuario` en vez de `fkemail`, el sistema lo descubre
+automaticamente. No hay que cambiar codigo.
+
+### Compatibilidad
+
+- **PostgreSQL**: devuelve `foreign_table_name` directo en `foreign_keys`
+- **SqlServer**: a veces no devuelve bien `foreign_table_name`, entonces
+  busca como fallback en `fk_constraint_name` (ej: `fk_rolusuario_usuario`)
+
+---
+
+## Optimizaciones del login
+
+| Optimizacion | Que hace | Por que |
+|---|---|---|
+| `PrecargarEstructura()` | 1 sola llamada para TODA la BD | En vez de 5 llamadas (una por tabla) |
+| `Task.WhenAll` | Llamadas HTTP en paralelo | Login mas rapido (no secuencial) |
+| `_cache` | Guarda PKs/FKs en memoria | No repite consultas a la API |
+| `ProtectedSessionStorage` | Persiste sesion al refrescar (F5) | No pide login de nuevo |
+
+---
+
+## Las 5 tablas y su relacion (diagrama)
+
+```
+usuario --< rol_usuario >-- rol --< rutarol >-- ruta
+(quien)    (tiene roles)  (que rol) (puede ver) (que pagina)
+
+Ejemplo concreto:
+  carloscastro5033@correo.itm.edu.co tiene rol "Administrador" (id=1)
+  Rol "Administrador" tiene acceso a /facultad, /asignatura, /estudiante
+  -> carloscastro5033 puede acceder a esas 3 paginas
+  -> Si intenta /workflow -> "Acceso Denegado" (403)
+  -> Si no hay rutas configuradas -> permite todo (sistema nuevo)
+```
 
 ---
 

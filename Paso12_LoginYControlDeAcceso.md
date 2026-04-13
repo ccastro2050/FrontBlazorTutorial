@@ -308,6 +308,100 @@ Las 3 capas juntas forman la seguridad completa:
 - JWT protege la API (si conocen la URL, no pueden operar sin token)
 - Sesion protege el frontend (si abren el navegador, no ven paginas sin login)
 
+### IMPORTANTE: JWT solo protege si el controller tiene [Authorize]
+
+El JWT existe y se envia, pero **solo funciona** si el controller de la API C#
+tiene el atributo `[Authorize]`. Si no lo tiene, el endpoint queda abierto
+aunque el token exista.
+
+```
+Actualmente en la API generica:
+
+  [ApiController]                        <-- NO tiene [Authorize]
+  [Route("api/[controller]")]
+  public class EntidadesController       <-- ABIERTO (cualquiera puede consumir)
+
+Para proteger:
+
+  [Authorize]                            <-- AGREGAR ESTA LINEA
+  [ApiController]
+  [Route("api/[controller]")]
+  public class EntidadesController       <-- PROTEGIDO (requiere JWT)
+```
+
+### Donde se pone [Authorize] en la API C#?
+
+En los controllers de la API generica. Los archivos estan en:
+```
+ApiGenericaCsharp/Controllers/
+  EntidadesController.cs          <-- CRUD generico (listar, crear, actualizar, eliminar)
+  AutenticacionController.cs      <-- Login (este NO debe tener [Authorize])
+  EstructurasController.cs        <-- Estructura BD (puede o no tener [Authorize])
+  ConsultasController.cs          <-- Consultas SQL
+```
+
+### Opciones de proteccion
+
+```csharp
+// OPCION 1: Proteger TODO el controller (todos los endpoints)
+[Authorize]
+[ApiController]
+[Route("api/[controller]")]
+public class EntidadesController : ControllerBase { ... }
+
+// OPCION 2: Proteger solo algunos metodos
+[ApiController]
+[Route("api/[controller]")]
+public class EntidadesController : ControllerBase
+{
+    [HttpGet]                     // <-- SIN [Authorize] = publico (cualquiera puede listar)
+    public async Task Listar() { ... }
+
+    [Authorize]                   // <-- CON [Authorize] = protegido (solo con token)
+    [HttpPost]
+    public async Task Crear() { ... }
+
+    [Authorize]
+    [HttpPut]
+    public async Task Actualizar() { ... }
+
+    [Authorize]
+    [HttpDelete]
+    public async Task Eliminar() { ... }
+}
+
+// OPCION 3: Proteger todo EXCEPTO login
+// AutenticacionController NO debe tener [Authorize] porque
+// es el endpoint que GENERA el token — si lo protegemos,
+// nadie puede obtener un token (paradoja).
+
+[ApiController]                          // SIN [Authorize]
+[Route("api/autenticacion")]
+public class AutenticacionController     // Login SIEMPRE abierto
+```
+
+### Que pasa si activo [Authorize] en la API?
+
+```
+ANTES (sin [Authorize]):
+  Postman: GET /api/usuario -> 200 OK (devuelve datos) ← ABIERTO
+
+DESPUES (con [Authorize]):
+  Postman sin token: GET /api/usuario -> 401 Unauthorized ← BLOQUEADO
+  Postman con token: GET /api/usuario + Authorization: Bearer eyJ... -> 200 OK
+  Blazor con login: GET /api/usuario + Authorization: Bearer eyJ... -> 200 OK
+  Blazor sin login: GET /api/usuario -> 401 Unauthorized ← BLOQUEADO
+```
+
+### Resumen: que protege que y donde se configura
+
+| Capa | Donde se configura | Efecto |
+|------|-------------------|--------|
+| `[Authorize]` en controller | API C# (`Controllers/*.cs`) | Requiere JWT para acceder |
+| JWT token en header | Frontend (`ApiService.cs`) | Envia el token en cada peticion |
+| ProtectedSessionStorage | Frontend (`AuthService.cs`) | Guarda el token encriptado en el navegador |
+| BCrypt | API C# (automatico con `?camposEncriptar=`) | Contrasenas irreversibles en BD |
+
 ---
 
 ## Que es BCrypt

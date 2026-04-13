@@ -56,9 +56,9 @@
 
 ---
 
-## Tablas necesarias en la base de datos
+## SQL para crear las tablas
 
-Son las mismas 5 tablas del tutorial Flask:
+Si las tablas no existen en la BD, ejecute este SQL:
 
 ```sql
 CREATE TABLE usuario (
@@ -96,12 +96,14 @@ CREATE TABLE rutarol (
 
 | Aspecto | Flask | Blazor |
 |---------|-------|--------|
-| Sesion | Cookie encriptada (server-side) | ProtectedSessionStorage (browser-side) |
-| Middleware | `@app.before_request` intercepta cada request | `MainLayout.OnAfterRenderAsync` verifica al cargar |
+| Sesion | Cookie encriptada con SECRET_KEY (server-side) | ProtectedSessionStorage con Data Protection (browser-side) |
+| Middleware | `@app.before_request` se ejecuta ANTES de cada request HTTP | `OnAfterRenderAsync` + `LocationChanged` verifican en cada navegacion |
+| JWT | Se guarda en sesion pero NO se envia a la API | Se guarda en sesion Y se envia en header Authorization |
 | Templates | Jinja2 (HTML con `{{ }}`) | Razor components (HTML con `@`) |
-| Interactividad | JavaScript + POST forms | SignalR (todo en C# sin JS) |
-| Layout login | `{% extends base.html %}` | `@layout EmptyLayout` |
-| Verificacion acceso | Middleware automatico en cada request | `TieneAcceso()` llamado en MainLayout |
+| Interactividad | JavaScript + POST forms + redirect | SignalR (todo en C# sin JS, sin recargar pagina) |
+| Layout login | `{% extends base.html %}` | `@layout EmptyLayout` (sin sidebar) |
+| Verificacion acceso | Middleware compara ruta vs `rutas_permitidas` en cada request | `TieneAcceso()` compara ruta vs `RutasPermitidas` en cada navegacion |
+| Pagina 403 | `sin_acceso.html` via `render_template`, HTTP 403 | `/sin-acceso` via `NavigateTo` (redirect client-side) |
 
 ---
 
@@ -208,11 +210,27 @@ CREATE TABLE rutarol (
 > alguien abra F12 y mire el Session Storage, solo ve caracteres sin sentido.
 >
 > Finalmente, redirige a la pagina de inicio. A partir de ese momento, cada vez
-> que el usuario navega a una pagina, el layout verifica si tiene permiso
-> consultando la lista de rutas permitidas. Y cada vez que se hace una peticion
-> a la API (listar, crear, actualizar, eliminar), el token JWT se envia
-> automaticamente en el header Authorization para que la API sepa quien esta
-> operando y no rechace la peticion.
+> que el usuario navega a una pagina (ya sea haciendo clic en el menu o escribiendo
+> la URL manualmente), el layout verifica si tiene permiso consultando la lista
+> de rutas permitidas. Si la ruta esta en la lista, muestra la pagina. Si no esta,
+> redirige automaticamente a la pagina "Acceso Denegado" (403).
+>
+> Al mismo tiempo, cada vez que se hace una peticion a la API (listar registros,
+> crear, actualizar o eliminar), el token JWT se envia automaticamente en el
+> header Authorization de la peticion HTTP. Si la API tiene [Authorize] en sus
+> controllers, verifica que el token sea valido y no haya expirado. Si el token
+> es valido, permite la operacion. Si no lo es, responde 401 Unauthorized.
+>
+> Cuando el usuario hace clic en "Cerrar sesion", el sistema limpia toda la
+> informacion: borra el usuario, el token, los roles y las rutas permitidas
+> tanto de la memoria del servidor como del Session Storage del navegador.
+> Luego redirige a la pagina de login. Si el usuario intenta navegar a cualquier
+> pagina despues de cerrar sesion, el layout detecta que no hay sesion y lo
+> redirige al login de nuevo.
+>
+> Si el usuario cierra el tab del navegador sin hacer logout, el Session Storage
+> se borra automaticamente (a diferencia de localStorage que persiste). Al abrir
+> un tab nuevo, no hay sesion y debe hacer login de nuevo.
 
 ## Como funciona la proteccion de rutas
 
@@ -934,6 +952,8 @@ Abrir `appsettings.json` del proyecto y poner los datos:
 
 ## Probar el login
 
+### 1. Preparar
+
 1. Asegurese de que la API C# este corriendo (puerto 5035)
 2. Cree un usuario con contrasena encriptada:
    ```
@@ -948,6 +968,43 @@ Abrir `appsettings.json` del proyecto y poner los datos:
    POST http://localhost:5035/api/rol_usuario
    Body: {"fkemail": "admin@test.com", "fkidrol": 1}
    ```
+
+### 2. Probar login
+
 4. Ejecute: `dotnet run`
 5. Abra el navegador -> redirige a `/login`
 6. Ingrese credenciales -> deberia entrar
+7. Verifique en F12 -> Application -> Session Storage:
+   - usuario, nombre_usuario, token, roles, rutas_permitidas (encriptados)
+
+### 3. Probar control de acceso
+
+8. Asigne rutas al rol (en la tabla `rutarol`):
+   ```
+   POST http://localhost:5035/api/ruta
+   Body: {"ruta": "/facultad", "descripcion": "Gestion de facultades"}
+
+   POST http://localhost:5035/api/rutarol
+   Body: {"fkidrol": 1, "fkidruta": 1}
+   ```
+9. Cierre sesion y vuelva a entrar (para que cargue las rutas nuevas)
+10. Navegue a `/facultad` -> deberia funcionar (tiene permiso)
+11. Navegue a `/workflow` -> deberia mostrar "Acceso Denegado" (no tiene permiso)
+12. Escriba `/workflow` en la barra de direcciones -> mismo resultado (LocationChanged lo detecta)
+
+### 4. Probar JWT (opcional)
+
+13. En la API C#, agregue `[Authorize]` a un controller
+14. Sin hacer login, intente desde Postman: `GET /api/usuario` -> 401 Unauthorized
+15. Haga login, copie el token de Session Storage (F12)
+16. En Postman, agregue header: `Authorization: Bearer {token}` -> 200 OK
+
+### 5. Probar cambiar contrasena
+
+17. Vaya a `/recuperar-contrasena`
+18. Ingrese el email del usuario
+19. Si SMTP esta configurado -> llega correo con temporal
+20. Si SMTP no esta configurado -> muestra la temporal en pantalla
+21. Haga login con la temporal -> redirige a `/cambiar-contrasena` (forzado)
+22. Escriba nueva contrasena (minimo 6 chars, 1 mayuscula, 1 numero)
+23. Confirme -> redirige a `/` y puede navegar normalmente

@@ -2,20 +2,22 @@
 
 ## Los 3 conceptos clave de seguridad
 
-1. **Autenticacion** → ¿Quien eres? (login, BCrypt, JWT)
-2. **Autorizacion** → ¿Que puedes hacer? (roles, rutas, permisos)
-3. **Encriptacion** → ¿Como se protege? (BCrypt para contrasenas, Data Protection para sesion, HTTPS para transporte)
+1. **Autenticacion** → ¿Quien eres? (login con email + contrasena, BCrypt verifica, JWT como credencial)
+2. **Autorizacion** → ¿Que puedes hacer? (roles asignados al usuario, rutas permitidas por rol, verificacion en cada navegacion)
+3. **Encriptacion** → ¿Como se protege la informacion? (BCrypt para contrasenas en BD, Data Protection para sesion en navegador, JWT firmado para peticiones a la API, HTTPS para datos en transito)
 
 ## Que se implemento
 
-- **Login** con email y contrasena encriptada (BCrypt)
-- **JWT** (JSON Web Token): token enviado en cada request para proteger la API
-- **Control de acceso por roles**: cada usuario tiene roles, cada rol tiene rutas
-- **Cambio de contrasena** con validacion de seguridad (minimo 6 chars, mayuscula, numero)
-- **Recuperar contrasena** con envio de temporal por correo SMTP (Gmail)
-- **Sesion persistente** con ProtectedSessionStorage (encriptada, sobrevive F5)
-- **Descubrimiento dinamico** de PKs y FKs (compatible Postgres + SqlServer)
-- **3 capas de seguridad**: BCrypt (BD) + JWT (API) + Sesion (frontend)
+- **Login** con email y contrasena verificada con BCrypt (hash irreversible)
+- **JWT** (JSON Web Token): token generado al hacer login, enviado en cada peticion a la API como header `Authorization: Bearer ...`
+- **Control de acceso por roles**: cada usuario tiene roles, cada rol tiene rutas permitidas, se verifica en CADA navegacion (no solo al cargar)
+- **Verificacion de rutas**: MainLayout escucha `LocationChanged` y llama `TieneAcceso()` — si el usuario no tiene permiso, redirige a /sin-acceso (403)
+- **Cambio de contrasena** con validacion de seguridad (minimo 6 caracteres, al menos 1 mayuscula, al menos 1 numero)
+- **Recuperar contrasena** genera temporal aleatoria, la guarda con BCrypt, la envia por correo SMTP (Gmail), y fuerza cambio en el siguiente login
+- **Sesion persistente** con ProtectedSessionStorage (encriptada con Data Protection API, sobrevive F5, se pierde al cerrar tab)
+- **Descubrimiento dinamico** de PKs y FKs via `GET /api/estructuras/basedatos` (compatible Postgres y SqlServer, sin hardcodear nombres de columnas)
+- **3 capas de seguridad**: BCrypt protege la BD, JWT protege la API, Sesion protege el frontend
+- **[Authorize]** en la API: si se agrega este atributo en los controllers, la API rechaza peticiones sin token JWT valido
 
 ---
 

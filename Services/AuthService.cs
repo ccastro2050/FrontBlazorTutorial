@@ -105,6 +105,7 @@ public class AuthService
     public string? NombreUsuario { get; private set; }     // Nombre para mostrar en la barra
     public List<string> Roles { get; private set; } = new();  // Lista de roles: ["Admin", "Vendedor"]
     public HashSet<string> RutasPermitidas { get; private set; } = new(); // Rutas que puede acceder
+    public string? Token { get; private set; }               // Token JWT para enviar en cada request
     public bool EstaAutenticado => !string.IsNullOrEmpty(Usuario);  // true si hay sesion
     public bool DebeCambiarContrasena { get; set; }        // true si debe cambiar al entrar
 
@@ -209,14 +210,22 @@ public class AuthService
             // Enviar POST a la API: POST /api/autenticacion/token
             var resp = await _http.PostAsync($"/api/{endpoint}", content);
 
-            // Si la API respondio 200 OK -> credenciales correctas
-            if (resp.IsSuccessStatusCode) return (true, "OK");
+            // Si la API respondio 200 OK -> extraer el token JWT de la respuesta
+            if (resp.IsSuccessStatusCode)
+            {
+                var body = await resp.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(body);
+                // La API devuelve: {"token": "eyJhbG...", "usuario": "email", ...}
+                if (doc.RootElement.TryGetProperty("token", out var tokenEl))
+                    Token = tokenEl.GetString();
+                return (true, "OK");
+            }
 
             // Si respondio error (401, 500, etc) -> extraer el mensaje de error
             // La API retorna: {"estado": 401, "mensaje": "Contrasena incorrecta."}
-            var body = await resp.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(body);
-            var msg = doc.RootElement.TryGetProperty("mensaje", out var m)
+            var errBody = await resp.Content.ReadAsStringAsync();
+            using var errDoc = JsonDocument.Parse(errBody);
+            var msg = errDoc.RootElement.TryGetProperty("mensaje", out var m)
                 ? m.GetString() ?? "Error" : "Error";
             return (false, msg);
         }
@@ -414,6 +423,10 @@ public class AuthService
             // Persisten mientras el tab este abierto (F5 no los borra, cerrar tab si).
             await _session.SetAsync("usuario", Usuario);
             await _session.SetAsync("nombre_usuario", NombreUsuario ?? email);
+            // El token JWT se guarda para enviarlo en cada request a la API
+            // Si la API tiene [Authorize], sin este token las peticiones fallan con 401
+            if (!string.IsNullOrEmpty(Token))
+                await _session.SetAsync("token", Token);
             // Los roles y rutas se guardan como texto separado por comas
             // Ejemplo: "Administrador,Vendedor" y "/producto,/cliente,/factura"
             await _session.SetAsync("roles", string.Join(",", Roles));
@@ -582,6 +595,9 @@ public class AuthService
                 Usuario = userResult.Value;
                 var nombreResult = await _session.GetAsync<string>("nombre_usuario");
                 if (nombreResult.Success) NombreUsuario = nombreResult.Value;
+                // Restaurar token JWT para que ApiService lo envie en cada request
+                var tokenResult = await _session.GetAsync<string>("token");
+                if (tokenResult.Success) Token = tokenResult.Value;
                 var rolesResult = await _session.GetAsync<string>("roles");
                 if (rolesResult.Success && !string.IsNullOrEmpty(rolesResult.Value))
                     Roles = rolesResult.Value.Split(',').ToList();
@@ -600,11 +616,13 @@ public class AuthService
     {
         Usuario = null;
         NombreUsuario = null;
+        Token = null;
         Roles.Clear();
         RutasPermitidas.Clear();
         DebeCambiarContrasena = false;
         await _session.DeleteAsync("usuario");
         await _session.DeleteAsync("nombre_usuario");
+        await _session.DeleteAsync("token");
         await _session.DeleteAsync("roles");
         await _session.DeleteAsync("rutas_permitidas");
     }

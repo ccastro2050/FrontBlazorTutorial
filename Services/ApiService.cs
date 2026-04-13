@@ -3,18 +3,39 @@ using System.Text.Json;
 
 namespace FrontBlazorTutorial.Services
 {
+    /// <summary>
+    /// Servicio que consume la API generica C#.
+    /// Si AuthService tiene un token JWT, lo envia en cada request
+    /// como header "Authorization: Bearer {token}".
+    /// Si la API tiene [Authorize] en un controller, sin este token
+    /// las peticiones fallan con 401 Unauthorized.
+    /// </summary>
     public class ApiService
     {
         private readonly HttpClient _http;
+        private readonly AuthService? _auth;
 
         private readonly JsonSerializerOptions _jsonOptions = new()
         {
             PropertyNameCaseInsensitive = true
         };
 
-        public ApiService(HttpClient http)
+        public ApiService(HttpClient http, AuthService? auth = null)
         {
             _http = http;
+            _auth = auth;
+        }
+
+        /// <summary>
+        /// Agrega el token JWT al header Authorization antes de cada request.
+        /// Si no hay token (no ha hecho login), no agrega nada y la API
+        /// funciona sin autenticacion (endpoints sin [Authorize]).
+        /// </summary>
+        private void AgregarTokenJwt()
+        {
+            _http.DefaultRequestHeaders.Remove("Authorization");
+            if (_auth?.Token != null)
+                _http.DefaultRequestHeaders.Add("Authorization", $"Bearer {_auth.Token}");
         }
 
         // ──────────────────────────────────────────────
@@ -25,6 +46,7 @@ namespace FrontBlazorTutorial.Services
         {
             try
             {
+                AgregarTokenJwt();
                 string url = $"/api/{tabla}";
                 if (limite.HasValue)
                     url += $"?limite={limite.Value}";
@@ -54,6 +76,7 @@ namespace FrontBlazorTutorial.Services
         {
             try
             {
+                AgregarTokenJwt();
                 string url = $"/api/{tabla}";
                 if (!string.IsNullOrEmpty(camposEncriptar))
                     url += $"?camposEncriptar={camposEncriptar}";
@@ -84,6 +107,7 @@ namespace FrontBlazorTutorial.Services
         {
             try
             {
+                AgregarTokenJwt();
                 string url = $"/api/{tabla}/{nombreClave}/{valorClave}";
                 if (!string.IsNullOrEmpty(camposEncriptar))
                     url += $"?camposEncriptar={camposEncriptar}";
@@ -112,6 +136,7 @@ namespace FrontBlazorTutorial.Services
         {
             try
             {
+                AgregarTokenJwt();
                 var respuesta = await _http.DeleteAsync(
                     $"/api/{tabla}/{nombreClave}/{valorClave}");
                 var contenido = await respuesta.Content.ReadFromJsonAsync<JsonElement>(

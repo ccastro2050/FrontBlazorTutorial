@@ -189,6 +189,74 @@ solo esta disponible DESPUES del primer render. Si se llama antes, da error.
 
 ---
 
+## JWT: que es, para que y como se usa
+
+### Que es JWT?
+
+JWT (JSON Web Token) es un token que la API genera al hacer login exitoso.
+Es un string largo con 3 partes separadas por puntos: Header.Payload.Signature
+
+```
+eyJhbGciOiJIUzI1NiIs...   <-- se ve asi en Session Storage como "token"
+```
+
+### Para que sirve?
+
+Si la API tiene `[Authorize]` en un controller, SOLO acepta peticiones
+que traigan el token en el header HTTP:
+
+```
+GET /api/producto HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+Sin ese header -> la API responde 401 Unauthorized (rechaza la peticion).
+
+### Como funciona en este proyecto?
+
+```
+1. Login: POST /api/autenticacion/token
+   -> API verifica BCrypt -> genera JWT -> devuelve en respuesta
+
+2. AuthService captura el token:
+   -> Token = respuesta["token"]
+   -> Guarda en ProtectedSessionStorage("token", Token)
+
+3. Cada peticion de ApiService:
+   -> AgregarTokenJwt()  <-- agrega header Authorization
+   -> GET /api/producto  (con "Bearer eyJhbG..." en el header)
+
+4. API recibe el header:
+   -> Verifica firma JWT con clave secreta
+   -> Valido y no expiro -> permite la operacion
+   -> Invalido o expiro -> 401 Unauthorized
+```
+
+### Donde esta la clave secreta?
+
+En la API C# (`appsettings.json`):
+```json
+"Jwt": {
+    "Key": "MySuperSecretKey1234567890...",
+    "DuracionMinutos": 60
+}
+```
+El frontend NUNCA conoce la clave. Solo la API puede generar y verificar tokens.
+
+### JWT vs Sesion: que protege que?
+
+| Concepto | Donde se verifica | Que protege |
+|----------|------------------|-------------|
+| Sesion (ProtectedSessionStorage) | Frontend (Blazor) | Acceso a las PAGINAS |
+| JWT (Authorization header) | Backend (API C#) | Acceso a los DATOS |
+
+Ambos son necesarios:
+- Sin sesion -> usuario ve login (no puede navegar)
+- Sin JWT -> usuario ve la pagina pero no puede cargar datos (401)
+- Con ambos -> usuario ve la pagina Y puede operar con datos
+
+---
+
 ## Que es BCrypt
 
 BCrypt es un algoritmo de encriptacion de contrasenas **irreversible**.

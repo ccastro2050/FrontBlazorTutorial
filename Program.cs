@@ -16,9 +16,11 @@ builder.Services.AddScoped(sp => new HttpClient
 });
 
 // Registrar los servicios de la API
-builder.Services.AddScoped<FrontBlazorTutorial.Services.ApiService>();
-builder.Services.AddScoped<FrontBlazorTutorial.Services.SpService>();
+// AuthService se registra PRIMERO porque ApiService lo necesita para el token JWT
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<FrontBlazorTutorial.Services.ApiService>(sp =>
+    new ApiService(sp.GetRequiredService<HttpClient>(), sp.GetRequiredService<AuthService>()));
+builder.Services.AddScoped<FrontBlazorTutorial.Services.SpService>();
 
 var app = builder.Build();
 

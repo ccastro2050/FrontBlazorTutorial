@@ -255,6 +255,59 @@ Ambos son necesarios:
 - Sin JWT -> usuario ve la pagina pero no puede cargar datos (401)
 - Con ambos -> usuario ve la pagina Y puede operar con datos
 
+### Que valor agrega JWT? Por que es necesario?
+
+Sin JWT, la API esta **completamente abierta**. Cualquier persona que conozca
+la URL puede consumirla directamente desde Postman, curl o su propio codigo:
+
+```
+SIN JWT (API abierta - INSEGURO):
+
+  Cualquiera con Postman:
+    GET http://localhost:5035/api/usuario
+    -> Ve TODOS los usuarios con sus hashes BCrypt
+
+    DELETE http://localhost:5035/api/usuario/email/admin@mail.com
+    -> Borra al administrador
+
+    PUT http://localhost:5035/api/usuario/email/admin@mail.com
+    -> Modifica cualquier dato
+
+  La sesion de Blazor NO protege esto — solo protege las paginas del frontend.
+  La API sigue abierta aunque el usuario no haya hecho login en Blazor.
+```
+
+```
+CON JWT (API protegida - SEGURO):
+
+  Postman sin token:
+    GET http://localhost:5035/api/usuario
+    -> 401 Unauthorized (no puede ver nada)
+
+    DELETE http://localhost:5035/api/usuario/email/admin@mail.com
+    -> 401 Unauthorized (no puede borrar nada)
+
+  Postman CON token (obtenido via login):
+    GET http://localhost:5035/api/usuario
+    Headers: Authorization: Bearer eyJhbG...
+    -> 200 OK (datos devueltos)
+
+  Solo quien hizo login y tiene un token valido puede operar.
+```
+
+**Resumen**:
+
+| Capa | Que protege | De quien |
+|------|------------|----------|
+| **Sesion** (Blazor) | Las PAGINAS del frontend | Usuarios no logueados en el navegador |
+| **JWT** (API) | Los DATOS del backend | Cualquiera que intente consumir la API directamente |
+| **BCrypt** (BD) | Las CONTRASENAS en la base de datos | Alguien que acceda a la BD directamente |
+
+Las 3 capas juntas forman la seguridad completa:
+- BCrypt protege la BD (si la hackean, no ven contrasenas)
+- JWT protege la API (si conocen la URL, no pueden operar sin token)
+- Sesion protege el frontend (si abren el navegador, no ven paginas sin login)
+
 ---
 
 ## Que es BCrypt

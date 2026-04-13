@@ -593,6 +593,89 @@ Ejemplo concreto:
 
 ---
 
+## Como funciona Cambiar Contrasena
+
+### Cuando se activa?
+
+Dos casos:
+1. **Voluntario**: el usuario hace clic en "Cambiar contrasena"
+2. **Forzado**: el sistema genera una contrasena temporal (recuperar) y obliga
+   al usuario a cambiarla antes de poder usar la aplicacion
+
+### Flujo completo
+
+```
+1. Usuario hace login con contrasena temporal
+        |
+        v
+2. AuthService detecta: DebeCambiarContrasena = true
+   (porque el campo debe_cambiar_contrasena es true en la BD
+    o porque el email esta marcado en _emailsDebeCambiar)
+        |
+        v
+3. Login.razor redirige automaticamente:
+   -> nav.NavigateTo("/cambiar-contrasena")
+        |
+        v
+4. MainLayout TAMBIEN bloquea (doble proteccion):
+   -> if (_auth.DebeCambiarContrasena) nav.NavigateTo("/cambiar-contrasena")
+   -> El usuario NO puede ir a ninguna otra pagina
+   -> Si intenta ir a /facultad -> lo devuelve a /cambiar-contrasena
+        |
+        v
+5. CambiarContrasena.razor muestra formulario:
+   -> Campo: nueva contrasena
+   -> Campo: confirmar contrasena
+        |
+        v
+6. Validacion en el frontend (antes de enviar):
+   -> Las dos coinciden?         Si no -> "Las contrasenas no coinciden."
+   -> Minimo 6 caracteres?       Si no -> "Minimo 6 caracteres."
+   -> Tiene al menos 1 mayuscula? Si no -> "Debe incluir una mayuscula."
+   -> Tiene al menos 1 numero?   Si no -> "Debe incluir un numero."
+        |
+        v
+7. AuthService.CambiarContrasena(nueva):
+   -> PUT /api/usuario/{pk}/{email}?camposEncriptar=contrasena
+   -> Body: {"contrasena": "NuevaContrasena123"}
+        |
+        v
+8. La API C# recibe la peticion:
+   -> Ve ?camposEncriptar=contrasena en la URL
+   -> Ejecuta: BCrypt.HashPassword("NuevaContrasena123")
+   -> Resultado: "$2a$12$xK9mN..."  (hash irreversible)
+   -> Guarda el HASH en la BD (nunca el texto plano)
+   -> La contrasena anterior desaparece para siempre
+        |
+        v
+9. Si la API responde OK:
+   -> DebeCambiarContrasena = false
+   -> Redirect a / (pagina de inicio)
+   -> El usuario puede navegar normalmente
+```
+
+### Que pasa con la contrasena anterior?
+
+Se **sobreescribe** en la BD. No hay historial de contrasenas.
+La anterior deja de existir — solo el nuevo hash BCrypt queda guardado.
+
+### Por que se fuerza el cambio?
+
+Cuando se recupera contrasena:
+1. El sistema genera una temporal aleatoria (ej: "Ak7xPm2q")
+2. La guarda con BCrypt en la BD
+3. La envia por correo (o la muestra en pantalla)
+4. Marca el email para forzar cambio
+
+La temporal es **insegura** porque:
+- Se envio por correo (puede ser interceptado)
+- Se mostro en pantalla (alguien pudo verla)
+- Es generada aleatoriamente (el usuario no la eligio)
+
+Por eso se OBLIGA a crear una contrasena propia antes de usar el sistema.
+
+---
+
 ## Configurar Gmail para SMTP (recuperacion de contrasena)
 
 La recuperacion de contrasena genera una temporal, la guarda con BCrypt,

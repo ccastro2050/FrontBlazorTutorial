@@ -25,33 +25,34 @@
 
 ### Archivos que se CREAN (nuevos)
 
-| Archivo | Para que |
-|---------|---------|
-| `Services/AuthService.cs` | Toda la logica: login, roles, rutas, cambiar contrasena, descubrimiento dinamico |
-| `Components/Pages/Login.razor` | Formulario de login (email + contrasena) |
-| `Components/Pages/CambiarContrasena.razor` | Formulario para cambiar contrasena |
-| `Components/Pages/RecuperarContrasena.razor` | Recuperar contrasena olvidada (envia email SMTP) |
-| `Components/Pages/SinAcceso.razor` | Pagina error 403 (no tiene permiso para esa ruta) |
-| `Components/Layout/EmptyLayout.razor` | Layout vacio para login (sin sidebar ni menu) |
+| Archivo | Para que | Conceptos que usa |
+|---------|---------|-------------------|
+| `Services/AuthService.cs` | Toda la logica: login (BCrypt via API), capturar token JWT, cargar roles y rutas, cambiar contrasena, descubrimiento dinamico de PKs/FKs | Autenticacion + Autorizacion + Encriptacion |
+| `Components/Pages/Login.razor` | Formulario de login (email + contrasena). Usa EmptyLayout (sin sidebar) | Autenticacion |
+| `Components/Pages/CambiarContrasena.razor` | Formulario para cambiar contrasena con validacion (6 chars, mayuscula, numero). Se fuerza despues de recuperar | Encriptacion (BCrypt) |
+| `Components/Pages/RecuperarContrasena.razor` | Genera contrasena temporal, la guarda con BCrypt, la envia por SMTP | Encriptacion + SMTP |
+| `Components/Pages/SinAcceso.razor` | Pagina error 403: "No tiene permisos". Aparece cuando TieneAcceso() retorna false | Autorizacion |
+| `Components/Layout/EmptyLayout.razor` | Layout vacio (sin sidebar) para que login no muestre el menu | UI |
 
 ### Archivos que se MODIFICAN (ya existian)
 
 | Archivo | Que se agrega | Para que |
 |---------|---------------|---------|
-| `Program.cs` | `builder.Services.AddScoped<AuthService>();` | Registrar el servicio en Blazor (Dependency Injection) |
-| `Components/App.razor` | `@rendermode="InteractiveServer"` en `<Routes>` | Hacer el layout interactivo (necesario para ProtectedSessionStorage) |
-| `Components/Layout/MainLayout.razor` | `@inject AuthService`, `OnAfterRenderAsync`, boton logout | Verificar sesion al cargar, redirigir a /login, mostrar usuario y boton cerrar sesion |
+| `Program.cs` | `AddScoped<AuthService>()` y `ApiService` recibe `AuthService` | Registrar servicios. ApiService necesita AuthService para leer el token JWT |
+| `Components/App.razor` | `@rendermode="InteractiveServer"` en `<Routes>` | Hacer el layout interactivo (necesario para ProtectedSessionStorage y OnAfterRenderAsync) |
+| `Components/Layout/MainLayout.razor` | `@inject AuthService`, `OnAfterRenderAsync`, `LocationChanged`, `VerificarAcceso()`, boton logout | Restaurar sesion, verificar permisos en CADA navegacion, redirigir a /login o /sin-acceso |
+| `Services/ApiService.cs` | Metodo `AgregarTokenJwt()` que agrega header `Authorization: Bearer {token}` | Enviar JWT en cada peticion para que la API acepte las operaciones si tiene [Authorize] |
 | `appsettings.json` | Seccion `"Smtp"` con Host, Port, User, Pass, From | Configurar correo Gmail para recuperar contrasena |
 
 ### Tablas que se necesitan en la BD (5)
 
-| Tabla | Para que |
-|-------|---------|
-| `usuario` | Almacenar credenciales (email + contrasena BCrypt) |
-| `rol` | Definir tipos de usuario (Administrador, Vendedor, etc) |
-| `rol_usuario` | Asignar roles a usuarios (un usuario puede tener varios roles) |
-| `ruta` | Registrar las paginas del sistema (/producto, /cliente, etc) |
-| `rutarol` | Definir que paginas puede acceder cada rol |
+| Tabla | Para que | Relacion |
+|-------|---------|----------|
+| `usuario` | Almacenar credenciales (email como PK + contrasena como hash BCrypt) | Tabla principal |
+| `rol` | Definir tipos de usuario (Administrador, Profesor, Estudiante, etc) | Tabla de catalogo |
+| `rol_usuario` | Asignar roles a usuarios. Un usuario puede tener VARIOS roles | Tabla intermedia N:M entre usuario y rol |
+| `ruta` | Registrar las paginas del sistema (/facultad, /asignatura, etc) | Tabla de catalogo |
+| `rutarol` | Definir que paginas puede acceder cada rol | Tabla intermedia N:M entre rol y ruta |
 
 ---
 

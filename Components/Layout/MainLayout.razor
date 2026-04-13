@@ -7,8 +7,11 @@
     2. Llama _auth.Restaurar() para recuperar la sesion del navegador
     3. Si no hay sesion -> redirige a /login
     4. Si debe cambiar contrasena -> redirige a /cambiar-contrasena
-    5. Muestra spinner mientras restaura (evita flash de contenido)
-    6. Barra superior muestra nombre del usuario + boton "Cerrar sesion"
+    5. Verifica si el usuario tiene permiso para la ruta actual (TieneAcceso)
+    6. Si no tiene permiso -> redirige a /sin-acceso
+    7. Muestra spinner mientras restaura (evita flash de contenido)
+    8. Barra superior muestra nombre del usuario + boton "Cerrar sesion"
+    9. Al navegar a otra pagina, vuelve a verificar permisos (LocationChanged)
 
     QUE ES OnAfterRenderAsync:
     ==========================
@@ -18,6 +21,7 @@
 *@
 
 @inherits LayoutComponentBase
+@implements IDisposable
 @inject FrontBlazorTutorial.Services.AuthService _auth
 @inject NavigationManager _nav
 
@@ -66,23 +70,81 @@ else
 @code {
     private bool _cargando = true;
 
+    protected override void OnInitialized()
+    {
+        // Escuchar cambios de navegacion para verificar permisos en cada pagina
+        _nav.LocationChanged += OnLocationChanged;
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             await _auth.Restaurar();
             _cargando = false;
+
+            // 1. Sin sesion -> login
             if (!_auth.EstaAutenticado && !_nav.Uri.Contains("/login"))
+            {
                 _nav.NavigateTo("/login");
+                return;
+            }
+
+            // 2. Debe cambiar contrasena -> forzar
             if (_auth.DebeCambiarContrasena && !_nav.Uri.Contains("/cambiar-contrasena"))
+            {
                 _nav.NavigateTo("/cambiar-contrasena");
+                return;
+            }
+
+            // 3. Verificar si tiene acceso a la ruta actual
+            VerificarAcceso();
+
             StateHasChanged();
         }
+    }
+
+    /// <summary>
+    /// Se ejecuta CADA VEZ que el usuario navega a otra pagina.
+    /// Verifica si tiene permiso para la nueva ruta.
+    /// Sin esto, el usuario podria escribir la URL manualmente y acceder.
+    /// </summary>
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        VerificarAcceso();
+    }
+
+    /// <summary>
+    /// Extrae la ruta del URL actual y verifica con TieneAcceso().
+    /// Ejemplo: "http://localhost:5003/facultad" -> extrae "/facultad"
+    /// Si no tiene permiso -> redirige a /sin-acceso
+    /// </summary>
+    private void VerificarAcceso()
+    {
+        if (!_auth.EstaAutenticado) return;
+
+        // Extraer la ruta del URL completo
+        var uri = new Uri(_nav.Uri);
+        var ruta = uri.AbsolutePath; // ej: "/facultad"
+
+        // Rutas que siempre son accesibles (no verificar)
+        if (ruta == "/" || ruta == "/login" || ruta == "/sin-acceso" ||
+            ruta == "/cambiar-contrasena" || ruta == "/recuperar-contrasena")
+            return;
+
+        // Verificar si el usuario tiene permiso
+        if (!_auth.TieneAcceso(ruta))
+            _nav.NavigateTo("/sin-acceso");
     }
 
     private async Task _Logout()
     {
         await _auth.Logout();
         _nav.NavigateTo("/login");
+    }
+
+    public void Dispose()
+    {
+        _nav.LocationChanged -= OnLocationChanged;
     }
 }

@@ -213,28 +213,107 @@ CREATE TABLE rutarol (
 
 ## Como funciona la proteccion de rutas
 
+La proteccion de rutas tiene 2 momentos:
+
+### Momento 1: Al cargar la pagina (OnAfterRenderAsync)
+
 ```csharp
-// MainLayout.razor - OnAfterRenderAsync
-// Se ejecuta DESPUES del primer render (necesario para ProtectedSessionStorage)
+// Se ejecuta la PRIMERA vez que se carga cualquier pagina
 
 protected override async Task OnAfterRenderAsync(bool firstRender)
 {
     if (firstRender)
     {
-        await _auth.Restaurar();        // Lee sesion del navegador
-        
-        if (!_auth.EstaAutenticado)      // No hay sesion?
-            _nav.NavigateTo("/login");   // -> Ir a login
-            
-        if (_auth.DebeCambiarContrasena) // Debe cambiar?
-            _nav.NavigateTo("/cambiar-contrasena"); // -> Forzar cambio
-            
-        StateHasChanged();               // Re-renderizar con datos de auth
+        await _auth.Restaurar();           // 1. Lee sesion del navegador
+
+        if (!_auth.EstaAutenticado)         // 2. No hay sesion?
+            _nav.NavigateTo("/login");      //    -> Ir a login
+
+        if (_auth.DebeCambiarContrasena)    // 3. Debe cambiar contrasena?
+            _nav.NavigateTo("/cambiar-contrasena"); // -> Forzar
+
+        VerificarAcceso();                  // 4. Tiene permiso para esta ruta?
+
+        StateHasChanged();                  // 5. Re-renderizar
     }
 }
 ```
 
-**Por que OnAfterRenderAsync y no OnInitialized?**
+### Momento 2: Al navegar a otra pagina (LocationChanged)
+
+```csharp
+// Se ejecuta CADA VEZ que el usuario hace clic en un link del menu
+// o escribe una URL manualmente en el navegador
+
+protected override void OnInitialized()
+{
+    _nav.LocationChanged += OnLocationChanged;  // Escuchar navegacion
+}
+
+private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+{
+    VerificarAcceso();  // Verificar permisos en la nueva ruta
+}
+```
+
+Sin esto, el usuario podria escribir `/admin` en la barra de direcciones
+y acceder aunque no tenga permiso — porque OnAfterRenderAsync solo se
+ejecuta la primera vez.
+
+### El metodo VerificarAcceso()
+
+```csharp
+private void VerificarAcceso()
+{
+    if (!_auth.EstaAutenticado) return;    // Si no hay login, no verificar
+
+    var uri = new Uri(_nav.Uri);
+    var ruta = uri.AbsolutePath;           // Ej: "/facultad"
+
+    // Rutas que SIEMPRE son accesibles (no verificar)
+    if (ruta == "/" || ruta == "/login" || ruta == "/sin-acceso" ||
+        ruta == "/cambiar-contrasena") return;
+
+    // VERIFICAR: la ruta actual esta en las rutas permitidas del usuario?
+    if (!_auth.TieneAcceso(ruta))
+        _nav.NavigateTo("/sin-acceso");    // -> Pagina 403
+}
+```
+
+### Como sabe TieneAcceso() si puede o no?
+
+```csharp
+// En AuthService.cs:
+public bool TieneAcceso(string ruta)
+{
+    if (ruta == "/") return true;                    // Home siempre accesible
+    if (RutasPermitidas.Count == 0) return true;     // Sin config = permitir todo
+    return RutasPermitidas.Any(r =>
+        ruta == r || ruta.StartsWith(r + "/"));      // Ruta exacta o sub-ruta
+}
+```
+
+Ejemplo:
+```
+RutasPermitidas = ["/facultad", "/asignatura", "/estudiante"]
+
+TieneAcceso("/facultad")        -> true  (esta en la lista)
+TieneAcceso("/facultad/crear")  -> true  (sub-ruta de /facultad)
+TieneAcceso("/workflow")        -> false -> redirige a /sin-acceso
+TieneAcceso("/")                -> true  (home siempre accesible)
+```
+
+Si `RutasPermitidas` esta vacio (sistema nuevo sin configurar), permite todo
+para no bloquear al primer usuario.
+
+> **Lectura del flujo**: Cada vez que el usuario navega a una pagina, el layout
+> extrae la ruta del URL (por ejemplo `/facultad`), y la compara contra la lista
+> de rutas permitidas que se cargo al hacer login. Si la ruta esta en la lista
+> (o es una sub-ruta como `/facultad/crear`), muestra la pagina normalmente.
+> Si no esta, redirige automaticamente a la pagina "Acceso Denegado" (403).
+> Esto se verifica tanto al cargar la primera pagina como al navegar con clics.
+
+**Por que OnAfterRenderAsync y no OnInitialized para Restaurar?**
 Porque ProtectedSessionStorage necesita JavaScript del navegador, y JavaScript
 solo esta disponible DESPUES del primer render. Si se llama antes, da error.
 

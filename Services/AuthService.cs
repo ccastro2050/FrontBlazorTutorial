@@ -914,12 +914,25 @@ WHERE u.{pkUsuario} = @email";
     {
         try
         {
-            // Verificar que el usuario existe
+            // Verificar que el usuario existe usando verificar-contrasena (AllowAnonymous).
+            // Este endpoint no requiere JWT, lo cual es necesario porque el usuario
+            // NO esta logueado cuando recupera su contrasena.
+            // Logica: enviamos contrasena dummy. Si la API responde:
+            //   404 = el email NO existe
+            //   401 = el email SI existe (contrasena incorrecta, lo esperado)
+            //   200 = el email SI existe (imposible con contrasena dummy)
             var pkUsuario = await ObtenerPK("usuario");
-            var usuarios = await Listar("usuario");
-            var existe = usuarios.Any(u =>
-                (u.GetValueOrDefault(pkUsuario)?.ToString() ?? "").Equals(email, StringComparison.OrdinalIgnoreCase));
-            if (!existe) return (false, "No se encontro una cuenta con ese correo.");
+            var verificarUrl = $"/api/usuario/verificar-contrasena";
+            var verificarBody = new Dictionary<string, string>
+            {
+                ["campoUsuario"] = pkUsuario,
+                ["campoContrasena"] = "contrasena",
+                ["valorUsuario"] = email,
+                ["valorContrasena"] = "__verificacion_existencia__"
+            };
+            var verificarResp = await _http.PostAsJsonAsync(verificarUrl, verificarBody);
+            if (verificarResp.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return (false, "No se encontro una cuenta con ese correo.");
 
             // Generar contrasena temporal: 1 mayuscula + 1 minuscula + 1 digito + 5 aleatorios
             var rng = new Random();

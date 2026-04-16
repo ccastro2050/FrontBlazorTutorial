@@ -48,13 +48,18 @@ existentes (brownfield) donde ya hay código.
 
 ## 3. Cómo se instalaría Spec-Kit en este proyecto (.NET/C#)
 
+> **Nota:** Spec-Kit es una herramienta de línea de comandos escrita en Python.
+> No importa que el proyecto sea C#/.NET — Spec-Kit solo genera archivos Markdown
+> y scripts. No modifica ni interfiere con el código C#. Python se necesita
+> únicamente para ejecutar el CLI de Spec-Kit.
+
 ### 3.1 Prerrequisitos
 
-| Herramienta | Versión mínima | Cómo instalar |
-|------------|---------------|---------------|
-| Python | 3.11+ | [python.org](https://www.python.org/downloads/) |
-| uv | 0.11+ | `pip install uv` |
-| Git | cualquiera | Ya instalado |
+| Herramienta | Versión mínima | Cómo instalar | Para qué |
+|------------|---------------|---------------|----------|
+| Python | 3.11+ | [python.org](https://www.python.org/downloads/) | Runtime del CLI de Spec-Kit |
+| uv | 0.11+ | `pip install uv` | Gestor de paquetes Python (recomendado por GitHub) |
+| Git | cualquiera | Ya instalado | Control de versiones |
 
 ### 3.2 Comando de instalación
 
@@ -120,13 +125,18 @@ FrontBlazorTutorial/
 
 ## 4. Cómo se instalaría OpenSpec en este proyecto
 
+> **Nota:** OpenSpec es una herramienta de línea de comandos escrita en Node.js.
+> No importa que el proyecto sea C#/.NET — OpenSpec solo genera archivos Markdown
+> (specs, changes, delta specs). No modifica ni interfiere con el código C#.
+> Node.js se necesita únicamente para ejecutar el CLI de OpenSpec.
+
 ### 4.1 Prerrequisitos
 
-| Herramienta | Versión mínima | Cómo verificar |
-|------------|---------------|----------------|
-| Node.js | 20.19+ | `node --version` |
-| npm | (incluido) | `npm --version` |
-| Git | cualquiera | `git --version` |
+| Herramienta | Versión mínima | Cómo instalar | Para qué |
+|------------|---------------|---------------|----------|
+| Node.js | 20.19+ | [nodejs.org](https://nodejs.org/) | Runtime del CLI de OpenSpec |
+| npm | (incluido con Node.js) | Viene con Node.js | Instalar el paquete @fission-ai/openspec |
+| Git | cualquiera | Ya instalado | Control de versiones |
 
 ### 4.2 Comando de instalación
 

@@ -77,3 +77,67 @@ FrontBlazorTutorial/
 | Repositorio | GitHub |
 | Audiencia | Estudiantes de Diseño de Software (universitarios) |
 | Metodología | Spec Driven Development |
+
+---
+
+## Versionamiento de la documentación SDD
+
+En SDD, la documentación se versiona **igual que el código** — vive dentro del repositorio
+Git y se commitea junto con los cambios de código. No es un Google Doc aparte ni un PDF
+que se envía por correo. Es un archivo Markdown que evoluciona con el proyecto.
+
+> "La especificación no es un documento estático. Es un entregable vivo que se versiona
+> junto con el código y refleja el estado actual del sistema."
+>
+> — [spec-driven.md, GitHub Spec-Kit](https://github.com/github/spec-kit/blob/main/spec-driven.md)
+
+### Cómo se versiona en la práctica
+
+| Acción en el proyecto | Qué se commitea | Ejemplo de commit |
+|-----------------------|-----------------|-------------------|
+| Crear una feature nueva | `sdd/` (spec, plan, tasks) **PRIMERO**, luego el código | `docs: spec login con JWT y control de acceso` |
+| Cambiar una decisión técnica | Editar `01_constitucion.md` | `docs: cambiar de 5 GETs a ConsultasController` |
+| Agregar una tabla a la BD | Editar `data-model.md` + `02_especificacion.md` | `docs: agregar tabla workflow al modelo ER` |
+| Completar una tarea | Marcar `[x]` en `05_tareas.md` + commit del código | `feat: CRUD producto + marcar tarea completada` |
+| Corregir un error en la spec | Editar el .md correspondiente | `fix: corregir cardinalidad cliente-factura en spec` |
+
+### Orden correcto: documentación primero, código después
+
+```
+1. Escribir/actualizar la spec  →  git add sdd/  →  git commit -m "docs: ..."
+2. Implementar el código         →  git add ...   →  git commit -m "feat: ..."
+3. Verificar contra la spec      →  marcar [x]    →  git commit -m "docs: tarea completada"
+```
+
+### Ver historial de cambios de la documentación
+
+```powershell
+# Ver todos los cambios en la constitución
+git log --oneline sdd/01_constitucion.md
+
+# Ver qué cambió en la especificación
+git diff HEAD~1 sdd/02_especificacion.md
+
+# Ver quién modificó el plan y cuándo
+git blame sdd/04_plan.md
+```
+
+### Regla: la spec SIEMPRE refleja el estado actual
+
+Si el código cambió pero la spec no, hay **deuda de especificación**. Esto es tan grave como
+la deuda técnica — significa que la documentación miente sobre cómo funciona el sistema.
+
+| Situación | Estado | Acción |
+|-----------|--------|--------|
+| Spec dice X, código hace X | Correcto | Nada |
+| Spec dice X, código hace Y | Deuda de spec | Actualizar la spec |
+| Spec dice X, código no existe | Tarea pendiente | Implementar |
+| No hay spec, código existe | Deuda de spec | Documentar retroactivamente |
+
+### Con herramientas SDD (opcional)
+
+| Herramienta | Cómo ayuda con el versionamiento |
+|-------------|--------------------------------|
+| **Spec-Kit** | `/speckit-git-commit` genera commits estandarizados vinculados a la spec |
+| **OpenSpec** | `/opsx:archive` mueve changes completados a `archive/` con fecha automática |
+| **Git normal** | `git add sdd/ && git commit` — funciona perfectamente sin herramientas |
